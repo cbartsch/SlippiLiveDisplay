@@ -44,7 +44,8 @@ int main(int argc, char *argv[])
 
     qmlRegisterType<DolphinConnection>("SlippiLive", 1, 0, "DolphinConnection");
     qmlRegisterType<EventParser>("SlippiLive", 1, 0, "SlippiEventParser");
-    qmlRegisterUncreatableType<GameInformation>("SlippiLive", 1, 0, "GameInfo", "Only used for EventParser.gameInfo");
+    qmlRegisterUncreatableType<GameInformation>("SlippiLive", 1, 0, "GameInformation", "Only used for EventParser.gameInfo");
+    qmlRegisterUncreatableType<PlayerInformation>("SlippiLive", 1, 0, "PlayerInformation", "Only used for EventParser.gameInfo.playerN");
 
     engine.load(QUrl(felgo.mainQmlFileName()));
 

@@ -35,14 +35,7 @@ void EventParser::parseSlippiMessage(const QVariantMap &event)
         parseGameEvent(cursor, nextCursor, payload);
     }
     else if(type == "end_game") {
-        m_gameRunning = false;
-        m_hasPayloadSizes = false;
-        m_dataBuffer.clear();
-        m_dataStream.device()->reset();
-        m_writeStream.device()->reset();
-        m_availableBytes = 0;
-        m_currentCommandByte = 0;
-        emit gameRunningChanged();
+        resetGameState();
     }
 }
 
@@ -186,28 +179,29 @@ bool EventParser::parseGameStart()
     quint8 version[4];
     stream.readRawData((char*)&version, 4);
 
-    m_gameInfo.m_version = QString("%1.%2.%3 (%4)").arg(version[0]).arg(version[1]).arg(version[2]).arg(version[3]);
+    m_gameInfo.version = QString("%1.%2.%3 (%4)").arg(version[0]).arg(version[1]).arg(version[2]).arg(version[3]);
 
-    qDebug() << "Game version:" << m_gameInfo.m_version;
+    char gameInfoBlock[312];
+    stream.readRawData(gameInfoBlock, 312);
 
-    // TODO
-    char gameInfoData[312];
-    stream.readRawData(gameInfoData, 312);
+    QDataStream gameInfoStream(QByteArray(gameInfoBlock, 312));
+    gameInfoStream.skipRawData(0x60);
 
-    quint32 randomSeed;
-    stream >> randomSeed;
-    qDebug() << "Seed:" << randomSeed;
-
-    quint32 dashbackFix[NUM_PLAYERS];
     for(int i = 0; i < NUM_PLAYERS; i++) {
-        stream >> dashbackFix[i];
-        qDebug() << "dashbackFix port " << i << ":" << QString::number(dashbackFix [i], 16);
+        gameInfoStream >> m_gameInfo.players[i].charId;
+        gameInfoStream >> m_gameInfo.players[i].playerType;
+
+        gameInfoStream.skipRawData(0x22);
     }
 
-    quint32 shieldDropFix[NUM_PLAYERS];
+    stream >> m_gameInfo.seed;
+
     for(int i = 0; i < NUM_PLAYERS; i++) {
-        stream >> shieldDropFix[i];
-        qDebug() << "shieldDropFix port " << i << ":" << QString::number(shieldDropFix [i], 16);
+        stream >> m_gameInfo.players[i].dashbackFix;
+    }
+
+    for(int i = 0; i < NUM_PLAYERS; i++) {
+        stream >> m_gameInfo.players[i].shieldDropFix;
     }
 
     QTextCodec *jisCodec = QTextCodec::codecForName("Shift-JIS");
@@ -217,59 +211,62 @@ bool EventParser::parseGameStart()
         jisCodec = QTextCodec::codecForLocale();
     }
 
-    QString nameTags[NUM_PLAYERS];
     for(int i = 0; i < NUM_PLAYERS; i++) {
         char rawTag[16];
         stream.readRawData(rawTag, 16);
-        nameTags[i] = jisCodec->toUnicode(rawTag);
-        qDebug() << "nameTags port " << i << ":" << nameTags[i];
+        m_gameInfo.players[i].nameTag = jisCodec->toUnicode(rawTag);
     }
 
-    quint8 isPal, isFrozenPS, minorScene, majorScene;
-    stream >> isPal >> isFrozenPS >> minorScene >> majorScene;
+    stream >> m_gameInfo.isPal >> m_gameInfo.isFrozenPS >> m_gameInfo.minorScene >> m_gameInfo.majorScene;
 
-    qDebug() << "Config:" << isPal << isFrozenPS << minorScene << majorScene;
-
-    QString displayNames[NUM_PLAYERS];
     for(int i = 0; i < NUM_PLAYERS; i++) {
         char rawName[31];
         stream.readRawData(rawName, 31);
-        displayNames[i] = jisCodec->toUnicode(rawName);
-        qDebug() << "displayNames port " << i << ":" << displayNames[i];
+        m_gameInfo.players[i].slippiName = jisCodec->toUnicode(rawName);
     }
 
-    QString connectCodes[NUM_PLAYERS];
     for(int i = 0; i < NUM_PLAYERS; i++) {
         char rawCode[10];
         stream.readRawData(rawCode, 10);
-        connectCodes[i] = jisCodec->toUnicode(rawCode);
-        qDebug() << "connectCodes port " << i << ":" << connectCodes[i];
+        QString codeStr = jisCodec->toUnicode(rawCode);
+
+        // replace Shift-JIS (Unicode 0xff03) hash with regular hash
+        m_gameInfo.players[i].slippiCode = codeStr.replace(QChar(0xff03), '#');
     }
 
-    QString slippiUIDs[NUM_PLAYERS];
     for(int i = 0; i < NUM_PLAYERS; i++) {
         char rawUid[29];
         stream.readRawData(rawUid, 29);
-        slippiUIDs[i] = QString::fromUtf8(rawUid);
-        qDebug() << "displayNames port " << i << ":" << slippiUIDs[i];
+        m_gameInfo.players[i].slippiUid = QString::fromUtf8(rawUid);
     }
 
-    quint8 languageOption;
-    stream >> languageOption;
-    qDebug() << "Language option:" << (int)languageOption;
+    stream >> m_gameInfo.languageOption;
 
     char rawMatchId[51];
     stream.readRawData(rawMatchId, 51);
-    QString matchId = QString::fromUtf8(rawMatchId);
-    qDebug() << "Match ID:" << matchId;
+    m_gameInfo.matchId = QString::fromUtf8(rawMatchId);
 
-    quint32 gameNumber, tiebreakerNumber;
-    stream >> gameNumber >> tiebreakerNumber;
-    qDebug() << "Game/tiebreaker numbers:" << gameNumber << tiebreakerNumber;
+    stream >> m_gameInfo.gameNumber >> m_gameInfo.tiebreakerNumber;
 
     emit gameInfoChanged();
 
     return true;
+}
+
+void EventParser::resetGameState()
+{
+    // reset state for next game:
+    m_hasPayloadSizes = false;
+    m_dataBuffer.clear();
+    m_dataStream.device()->reset();
+    m_writeStream.device()->reset();
+    m_availableBytes = 0;
+    m_currentCommandByte = 0;
+    m_gameInfo = {};
+
+    m_gameRunning = false;
+    emit gameInfoChanged();
+    emit gameRunningChanged();
 }
 
 GameInformation EventParser::gameInfo() const

@@ -51,7 +51,10 @@ struct GameInformation {
     Q_PROPERTY(quint8 majorScene MEMBER majorScene)
 
     Q_PROPERTY(quint8 languageOption MEMBER languageOption)
+
     Q_PROPERTY(QString matchId MEMBER matchId)
+    Q_PROPERTY(quint32 gameNumber MEMBER gameNumber)
+    Q_PROPERTY(quint32 tiebreakerNumber MEMBER tiebreakerNumber)
 
 public:
     QString version;

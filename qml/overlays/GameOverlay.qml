@@ -3,6 +3,8 @@ import QtQuick 2.0
 import QtQuick.Window 2.0
 import Qt5Compat.GraphicalEffects
 
+import "../controls"
+
 Window {
   id: gameOverlay
   width: 440
@@ -12,29 +14,21 @@ Window {
   color: "transparent"
 
   property string gameType
+  property int gameNumber
 
-  AppText {
-    id: gameText
+  Column {
     anchors.centerIn: parent
 
-    text: gameType
+    CustomText {
+      anchors.horizontalCenter: parent.horizontalCenter
+      textItem.text: gameType || ""
+    }
 
-    font.pixelSize: 80
-    font.family: "Arial"
-    style: Text.Outline
-    styleColor: "black"
-    antialiasing: true
-    visible: false
-  }
-
-  DropShadow {
-    anchors.fill: gameText
-    horizontalOffset: 0
-    verticalOffset: 0
-    radius: 4.0
-    spread: 1
-    color: "black"
-    source: gameText
+    CustomText {
+      anchors.horizontalCenter: parent.horizontalCenter
+      textItem.font.pixelSize: 48
+      textItem.text: gameNumber > 0 ? "Game %1".arg(gameNumber) : ""
+    }
   }
 }
 

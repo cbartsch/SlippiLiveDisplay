@@ -18,7 +18,7 @@ public slots:
 
 private:
     DolphinConnection *m_item;
-    ENetHost * m_client;
+    ENetHost *m_client;
     bool m_running = false;
 };
 
@@ -79,14 +79,18 @@ void DolphinConnectionPrivate::connect(const QString &hostname, quint16 port) {
             qDebug() << "Connected to:" << event.peer->channelCount;
             break;
         case ENET_EVENT_TYPE_DISCONNECT:
-            qDebug() << "Disconnected.";
+            qDebug() << "Could not connect to Dolphin.";
             break;
         default:
             qDebug() << "Unknown event:" << event.type;
         }
     }
     else {
-        qDebug() << "Not connected to Dolphin after 5s. Exiting.";
+        qDebug() << "Not connected to Dolphin after 5s. Try again.";
+
+        enet_peer_disconnect(peer, 0);
+
+        QMetaObject::invokeMethod(this, "connect", Q_ARG(QString, m_item->m_hostAddress), Q_ARG(quint16, m_item->m_port));
         return;
     }
 
@@ -94,9 +98,9 @@ void DolphinConnectionPrivate::connect(const QString &hostname, quint16 port) {
 
     qDebug().noquote() << "Send:" << data.toLocal8Bit();
 
-    ENetPacket * packet = enet_packet_create (data.toLocal8Bit().constData(),
-                                            data.toLocal8Bit().size(),
-                                            ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket * packet = enet_packet_create(data.toLocal8Bit().constData(),
+                                             data.toLocal8Bit().size(),
+                                             ENET_PACKET_FLAG_RELIABLE);
 
     if(enet_peer_send(peer, 0, packet) != 0) {
         qWarning() << "Could not set connect request";
@@ -127,8 +131,11 @@ void DolphinConnectionPrivate::receive() {
 
     switch(event.type) {
     case ENET_EVENT_TYPE_DISCONNECT:
-        qDebug() << "Disconnected.";
-        m_running = false;
+        qDebug() << "Disconnected from Dolphin.";
+
+        enet_peer_disconnect(event.peer, 0);
+
+        QMetaObject::invokeMethod(this, "connect", Q_ARG(QString, m_item->m_hostAddress), Q_ARG(quint16, m_item->m_port));
         break;
     case ENET_EVENT_TYPE_RECEIVE: {
         QByteArray data((const char*)event.packet->data, event.packet->dataLength);

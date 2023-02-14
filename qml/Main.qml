@@ -11,6 +11,19 @@ import "pages"
 App {
   id: app
 
+  DolphinConnection {
+    id: dolphin
+
+    onMessageReceived: (msg) => parser.parseSlippiMessage(msg)
+  }
+
+  SlippiEventParser {
+    id: parser
+
+    onConnectedChanged: console.log("Connected to Slippi changed:", connected)
+    onGameRunningChanged: console.log("Slippi game running changed:", gameRunning)
+  }
+
   readonly property var playerTypes: ({
     [PlayerInformation.Human]: "Human",
     [PlayerInformation.CPU]: "CPU",
@@ -83,17 +96,6 @@ App {
     Theme.appButton.rippleEffect = true
     Theme.appButton.horizontalMargin = 0
     Theme.appButton.horizontalPadding = dp(2)
-  }
-
-  DolphinConnection {
-    onMessageReceived: (msg) => parser.parseSlippiMessage(msg)
-  }
-
-  SlippiEventParser {
-    id: parser
-
-    onConnectedChanged: console.log("Connected to Slippi changed:", connected)
-    onGameRunningChanged: console.log("Slippi game running changed:", gameRunning)
   }
 
   function getRank(rating) {
@@ -194,6 +196,7 @@ query AccountManagementPageQuery($cc: String!, $uid: String!) {
 
   GameOverlay {
     gameType: app.gameType
+    gameNumber: parser.gameInfo.gameNumber
   }
 
   Repeater {

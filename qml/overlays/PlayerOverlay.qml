@@ -5,6 +5,8 @@ import Felgo 4.0
 
 import SlippiLive
 
+import "../controls"
+
 Item {
 
   property int playerNum
@@ -14,7 +16,9 @@ Item {
   property var rank
   property bool rtl
 
-  property real margins: overlay.height / 12
+  readonly property url imageUrl: profile && profile.ratingUpdateCount > 0
+  ? rank ? "https://slippi.gg/" + rank.imageUrl : ""
+  : "https://slippi.gg/static/media/rank_Unranked3.0f639e8b73090a7ba4a50f7bcc272f57.svg"
 
   Window {
     id: overlay
@@ -29,10 +33,9 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       anchors.left: rtl ? parent.left : undefined
       anchors.right: rtl ? undefined : parent.right
-      anchors.margins: margins
-      height: parent.height - 5 * margins
+      height: 96
       width: height
-      source: rank ? "https://slippi.gg/" + rank.imageUrl : ""
+      source: imageUrl
       visible: false
       antialiasing: false
     }
@@ -53,65 +56,28 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       anchors.left: rtl ? undefined : parent.left
       anchors.right: rtl ? parent.right : undefined
-      anchors.margins: margins
-      spacing: margins
 
-      Item {
-        width: overlay.width - 2 * margins
-        height: ratingText.height
-
-        AppText {
-          id: ratingText
-          width: parent.width
-          horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
-          text: rank ? "%1 (%2)".arg(rank.rank).arg(profile.ratingOrdinal.toFixed(0)) : ""
-          font.pixelSize: 48
-          font.family: "Arial"
-          style: Text.Outline
-          styleColor: "black"
-          antialiasing: true
-          visible: false
-        }
-
-        DropShadow {
-          anchors.fill: ratingText
-          horizontalOffset: 0
-          verticalOffset: 0
-          radius: 4.0
-          samples: 20
-          spread: 1
-          color: "black"
-          source: ratingText
-        }
+      CustomText {
+        textItem.width: overlay.width
+        textItem.text: rank
+                       ? profile.ratingUpdateCount > 1
+                         ? "%1 (%2)".arg(rank.rank).arg(profile.ratingOrdinal.toFixed(0))
+                         : "Not ranked"
+                       : ""
+        textItem.font.pixelSize: 54
+        textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
+        shadowItem.radius: 5.0
+        shadowItem.samples: 20
       }
 
-      Item {
-        width: overlay.width - 2 * margins
-        height: codeText.height
-
-        AppText {
-          id: codeText
-          width: parent.width
-          horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
-          text: player.slippiCode || ""
-          font.pixelSize: 64
-          font.family: "VCR OSD Mono"
-          style: Text.Outline
-          styleColor: "black"
-          antialiasing: false
-          visible: false
-        }
-
-        DropShadow {
-          anchors.fill: codeText
-          horizontalOffset: 0
-          verticalOffset: 0
-          radius: 4.0
-          samples: 20
-          spread: 1
-          color: "black"
-          source: codeText
-        }
+      CustomText {
+        textItem.width: overlay.width
+        textItem.text: player.slippiCode || ""
+        textItem.font.pixelSize: 70
+        textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
+        textItem.font.family: "VCR OSD Mono"
+        shadowItem.radius: 5.0
+        shadowItem.samples: 20
       }
     }
   }

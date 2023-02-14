@@ -19,7 +19,9 @@ signals:
 private slots:
 
 private:
+    friend class DolphinConnectionPrivate;
     class DolphinConnectionPrivate *d;
+
     QThread m_connectionThread;
     quint16 m_port = 51441;
     QString m_hostAddress = "localhost";

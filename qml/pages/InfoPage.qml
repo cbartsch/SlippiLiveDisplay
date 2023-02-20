@@ -31,7 +31,7 @@ AppPage {
 
     AppListItem {
       text: "Current match ID: " + parser.gameInfo.matchId
-      detailText: "Scores: " + playerScores.join(" - ")
+      detailText: "Scores: " + dataModel.playerScores.join(" - ")
     }
 
     Repeater {
@@ -45,16 +45,16 @@ AppPage {
              : ""
 
       AppListItem {
-        property var profile: netplayProfiles[modelData.slippiCode] || null
-        property var rank: profile ? getRank(profile.ratingOrdinal) : null
+        property var profile: dataModel.netplayProfiles[modelData.slippiCode] || null
+        property var rank: profile ? dataModel.getRank(profile.ratingOrdinal) : null
 
         visible: modelData.playerType !== PlayerInformation.Empty
 
         text: "Player %1: %2 (%3, %4)"
         .arg(index + 1)
         .arg(modelData.nameTag || modelData.slippiName || ("No name"))
-        .arg(playerTypes[modelData.playerType] || "Unknown")
-        .arg(charNames[modelData.charId])
+        .arg(dataModel.playerTypes[modelData.playerType] || "Unknown")
+        .arg(dataModel.charNames[modelData.charId])
 
         detailText: "Slippi: %1 (%2)%3"
         .arg(modelData.slippiName)
@@ -73,7 +73,7 @@ AppPage {
         }
 
         enabled: false
-        Component.onCompleted: getSlippiProfile(modelData)
+        Component.onCompleted: dataModel.getSlippiProfile(modelData)
       }
     }
   }

@@ -22,55 +22,59 @@ AppPage {
       .arg(parser.gameRunning ? "Yes" : "No")
       .arg(parser.gameInfo.version)
 
-      detailText: "%1, PAL: %2, frozen PS: %3, minor scene: %4, major scene: %5"
-      .arg(parser.gameInfo.matchId)
+      detailText: "AL: %2, frozen PS: %3, minor scene: %4, major scene: %5"
       .arg(parser.gameInfo.isPal)
       .arg(parser.gameInfo.isFrozenPS)
       .arg(parser.gameInfo.minorScene)
       .arg(parser.gameInfo.majorScene)
     }
 
-      Repeater {
-        model: parser.gameRunning
-               ? [
-                   parser.gameInfo.player1,
-                   parser.gameInfo.player2,
-                   parser.gameInfo.player3,
-                   parser.gameInfo.player4
-                 ]
-               : ""
+    AppListItem {
+      text: "Current match ID: " + parser.gameInfo.matchId
+      detailText: "Scores: " + playerScores.join(" - ")
+    }
 
-        AppListItem {
-          property var profile: netplayProfiles[modelData.slippiCode] || null
-          property var rank: profile ? getRank(profile.ratingOrdinal) : null
+    Repeater {
+      model: parser.gameRunning
+             ? [
+                 parser.gameInfo.player1,
+                 parser.gameInfo.player2,
+                 parser.gameInfo.player3,
+                 parser.gameInfo.player4
+               ]
+             : ""
 
-          visible: modelData.playerType !== PlayerInformation.Empty
+      AppListItem {
+        property var profile: netplayProfiles[modelData.slippiCode] || null
+        property var rank: profile ? getRank(profile.ratingOrdinal) : null
 
-          text: "Player %1: %2 (%3, %4)"
-          .arg(index + 1)
-          .arg(modelData.nameTag || modelData.slippiName || ("No name"))
-          .arg(playerTypes[modelData.playerType] || "Unknown")
-          .arg(charNames[modelData.charId])
+        visible: modelData.playerType !== PlayerInformation.Empty
 
-          detailText: "Slippi: %1 (%2)%3"
-          .arg(modelData.slippiName)
-          .arg(modelData.slippiCode)
-          .arg(profile
-          ? " %1 (%2)".arg(rank.rank).arg(profile.ratingOrdinal)
-          : "")
+        text: "Player %1: %2 (%3, %4)"
+        .arg(index + 1)
+        .arg(modelData.nameTag || modelData.slippiName || ("No name"))
+        .arg(playerTypes[modelData.playerType] || "Unknown")
+        .arg(charNames[modelData.charId])
 
-          rightItem: AppImage {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: dp(Theme.contentPadding)
-            height: dp(48)
-            width: height
-            source: rank ? "https://slippi.gg/" + rank.imageUrl : ""
-            visible: !!rank
-          }
+        detailText: "Slippi: %1 (%2)%3"
+        .arg(modelData.slippiName)
+        .arg(modelData.slippiCode)
+        .arg(profile
+        ? " %1 (%2)".arg(rank.rank).arg(profile.ratingOrdinal)
+        : "")
 
-          enabled: false
-          Component.onCompleted: getSlippiProfile(modelData)
+        rightItem: AppImage {
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.rightMargin: dp(Theme.contentPadding)
+          height: dp(48)
+          width: height
+          source: rank ? "https://slippi.gg/" + rank.imageUrl : ""
+          visible: !!rank
         }
+
+        enabled: false
+        Component.onCompleted: getSlippiProfile(modelData)
       }
     }
   }
+}

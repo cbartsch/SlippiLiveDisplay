@@ -8,6 +8,10 @@ import SlippiLive
 import "../controls"
 
 Item {
+  id: playerOverlay
+
+  width: 440
+  height: 130
 
   property int playerNum
 
@@ -21,12 +25,16 @@ Item {
   : "https://slippi.gg/static/media/rank_Unranked3.0f639e8b73090a7ba4a50f7bcc272f57.svg"
 
   Window {
-    id: overlay
-    width: 440
-    height: 160
+    id: overlayWindow
+    x: playerOverlay.x
+    y: playerOverlay.y
+    width: playerOverlay.width
+    height: playerOverlay.height
     visible: true
     title: "Player " + playerNum
     color: "transparent"
+
+    flags: Qt.Dialog | Qt.FramelessWindowHint
 
     AppImage {
       id: rankImg
@@ -58,7 +66,7 @@ Item {
       anchors.right: rtl ? parent.right : undefined
 
       CustomText {
-        textItem.width: overlay.width
+        textItem.width: overlayWindow.width
         textItem.text: rank
                        ? profile.ratingUpdateCount > 1
                          ? "%1 (%2)".arg(rank.rank).arg(profile.ratingOrdinal.toFixed(0))
@@ -71,12 +79,12 @@ Item {
       }
 
       CustomText {
-        textItem.width: overlay.width
+        textItem.width: overlayWindow.width
         textItem.text: player.slippiCode || ""
         textItem.font.pixelSize: 70
         textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
         textItem.font.family: "VCR OSD Mono"
-        shadowItem.radius: 5.0
+        shadowItem.radius: 6.0
         shadowItem.samples: 20
       }
     }

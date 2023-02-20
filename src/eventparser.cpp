@@ -23,8 +23,6 @@ void EventParser::parseSlippiMessage(const QVariantMap &event)
     else if(type == "start_game") {
         m_currentCursor = event["cursor"].toInt();
         m_nextCursor = event["next_cursor"].toInt();
-        m_gameRunning = true;
-        emit gameRunningChanged();
     }
     else if(type == "game_event") {
         int cursor = event["cursor"].toInt();
@@ -41,6 +39,8 @@ void EventParser::parseSlippiMessage(const QVariantMap &event)
 
 void EventParser::parseGameEvent(int cursor, int nextCursor, const QByteArray &payload)
 {
+    // Game events specification: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md
+
     if(cursor != m_nextCursor) {
         qWarning() << "Game event cursors do not match: expected" << m_nextCursor << ", got" << cursor;
         return;
@@ -154,7 +154,7 @@ bool EventParser::parseCommand()
     case EVENT_GECKO_LIST:
         break;
     case EVENT_GAME_END:
-        qDebug() << "Game end command.";
+        parseGameEnd();
         break;
     default:
         qWarning() << "Command" << QString::number(m_currentCommandByte, 16) << "not implemented.";
@@ -248,7 +248,30 @@ bool EventParser::parseGameStart()
 
     stream >> m_gameInfo.gameNumber >> m_gameInfo.tiebreakerNumber;
 
+    m_gameRunning = true;
     emit gameInfoChanged();
+    emit gameRunningChanged();
+    emit gameStarted();
+
+    return true;
+}
+
+bool EventParser::parseGameEnd()
+{
+    QDataStream stream(m_commandData);
+
+    quint8 gameEndMethod;
+    qint8 lrasPlayerIndex;
+    QList<int> playerPlacements;
+    stream >> gameEndMethod >> lrasPlayerIndex;
+
+    for(int i = 0; i < NUM_PLAYERS; i++) {
+        qint8 placement;
+        stream >> placement;
+        playerPlacements << placement;
+    }
+
+    emit gameEnded(GameEndMethod(gameEndMethod), lrasPlayerIndex, playerPlacements);
 
     return true;
 }

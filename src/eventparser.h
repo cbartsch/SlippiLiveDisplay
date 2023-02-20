@@ -34,7 +34,6 @@ public:
 };
 Q_DECLARE_METATYPE(PlayerInformation);
 
-
 struct GameInformation {
     Q_GADGET
     Q_PROPERTY(QString version MEMBER version)
@@ -44,6 +43,7 @@ struct GameInformation {
     Q_PROPERTY(PlayerInformation player2 READ player2)
     Q_PROPERTY(PlayerInformation player3 READ player3)
     Q_PROPERTY(PlayerInformation player4 READ player4)
+
 
     Q_PROPERTY(quint8 isPal MEMBER isPal)
     Q_PROPERTY(quint8 isFrozenPS MEMBER isFrozenPS)
@@ -71,6 +71,7 @@ public:
     PlayerInformation &player4() { return players[3]; }
 
     PlayerInformation players[NUM_PLAYERS];
+    PlayerInformation emptyPlayer;
 };
 
 class EventParser : public QObject
@@ -97,24 +98,33 @@ class EventParser : public QObject
         EVENT_SPLIT_MSG     = 0x10,
         EVENT_HIGHEST       = EVENT_GECKO_LIST
     };
-
 public:
     explicit EventParser(QObject *parent = nullptr);
 
     Q_INVOKABLE void parseSlippiMessage(const QVariantMap &event);
 
-    GameInformation gameInfo() const;
+    GameInformation gameInfo() const; 
+
+    enum GameEndMethod {
+        Unresolved = 0, Resolved = 3,
+        Time = 1, Game = 2, NoContext = 7
+    };
+    Q_ENUM(GameEndMethod);
 
 signals:
     void connectedChanged();
-    void gameRunningChanged();
     void gameInfoChanged();
+
+    void gameRunningChanged();
+    void gameStarted();
+    void gameEnded(EventParser::GameEndMethod endMethod, int lrasPlayer, QList<int> playerPlacements);
 
 private:
     void parseGameEvent(int cursor, int nextCursor, const QByteArray &payload);
     void parsePayloadSizes();
     bool parseCommand();
     bool parseGameStart();
+    bool parseGameEnd();
     void resetGameState();
 
     QString m_nick;

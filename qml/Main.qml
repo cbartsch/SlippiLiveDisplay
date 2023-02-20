@@ -11,6 +11,9 @@ import "pages"
 App {
   id: app
 
+  property string currentMatchId: ""
+  property var playerScores: [0, 0, 0, 0]
+
   DolphinConnection {
     id: dolphin
 
@@ -21,7 +24,30 @@ App {
     id: parser
 
     onConnectedChanged: console.log("Connected to Slippi changed:", connected)
-    onGameRunningChanged: console.log("Slippi game running changed:", gameRunning)
+    onGameRunningChanged: console.log("Slippi game running changed:", gameRunning, gameInfo.matchId)
+
+    onGameStarted: {
+      if(currentMatchId != gameInfo.matchId) {
+        currentMatchId = gameInfo.matchId
+        playerScores = [0, 0, 0, 0]
+        console.log("New game session:", currentMatchId)
+      }
+    }
+
+    onGameEnded: (gameEndMethod, lrasPlayer, playerPlacements) => {
+      console.log("Game ended", gameInfo.matchId, gameEndMethod, lrasPlayer, playerPlacements)
+
+      playerPlacements.forEach((p, i) => {
+        var ap = gameInfo["player" + (i + 1)]
+
+        if((lrasPlayer < 0 && p === 0) ||            // placements are 0-indexed, thus placement 0 is the winner
+           (lrasPlayer >= 0 && lrasPlayer !== i && ap.playerType !== PlayerInformation.Empty)) {  // count LRAS as loss for that player
+          playerScores[i]++
+        }
+      })
+
+      playerScoresChanged()
+    }
   }
 
   readonly property var playerTypes: ({
@@ -197,21 +223,28 @@ query AccountManagementPageQuery($cc: String!, $uid: String!) {
   GameOverlay {
     gameType: app.gameType
     gameNumber: parser.gameInfo.gameNumber
+    scoreP1: playerScores[0]
+    scoreP2: playerScores[1]
+
+    x: app.x + app.width
+    y: app.y
   }
 
   Repeater {
     model: 2
 
+    PlayerOverlay {
+      playerNum: index + 1
 
-      PlayerOverlay {
-        playerNum: index + 1
+      player: [parser.gameInfo.player1, parser.gameInfo.player2][index]
+      profile: netplayProfiles[player.slippiCode] || null
+      rank: profile ? getRank(profile.ratingOrdinal) : null
 
-        player: [parser.gameInfo.player1, parser.gameInfo.player2][index]
-        profile: netplayProfiles[player.slippiCode] || null
-        rank: profile ? getRank(profile.ratingOrdinal) : null
+      rtl: playerNum === 2
 
-        rtl: playerNum === 2
-      }
+      x: app.x + app.width
+      y: app.y + (height + 50) * (index + 1)
+    }
   }
 }
 

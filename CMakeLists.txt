@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.16)
 
 project(SlippiLiveDisplay VERSION 0.1 LANGUAGES CXX)
 
+set(QT_NO_FIND_QMLSC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
 
 find_package(Felgo REQUIRED)
 

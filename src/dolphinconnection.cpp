@@ -90,7 +90,9 @@ void DolphinConnectionPrivate::connect(const QString &hostname, quint16 port) {
 
         enet_peer_disconnect(peer, 0);
 
-        QMetaObject::invokeMethod(this, "connect", Q_ARG(QString, m_item->m_hostAddress), Q_ARG(quint16, m_item->m_port));
+        QMetaObject::invokeMethod(this, "connect", Qt::QueuedConnection,
+                                  Q_ARG(QString, m_item->m_hostAddress),
+                                  Q_ARG(quint16, m_item->m_port));
         return;
     }
 

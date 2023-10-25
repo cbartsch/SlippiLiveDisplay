@@ -8,6 +8,19 @@ EventParser::EventParser(QObject *parent) : QObject{parent},
     m_writeStream(&m_dataBuffer, QIODevice::OpenModeFlag::WriteOnly)
 {
     m_dataStream.setByteOrder(QDataStream::ByteOrder::BigEndian);
+
+    // add default values. current version of mainline beta only sends sizes for the first game of the session.
+    m_payloadSizes[0x10] = 516;
+    m_payloadSizes[0x36] = 760;
+    m_payloadSizes[0x37] = 64;
+    m_payloadSizes[0x38] = 84;
+    m_payloadSizes[0x39] = 6;
+    m_payloadSizes[0x3a] = 12;
+    m_payloadSizes[0x3b] = 44;
+    m_payloadSizes[0x3c] = 8;
+    m_payloadSizes[0x3d] = 54480;
+
+    m_payloadSizes[0x45] = 36; // some unknown command it sends if connecting to a running game
 }
 
 void EventParser::parseSlippiMessage(const QVariantMap &event)
@@ -31,6 +44,9 @@ void EventParser::parseSlippiMessage(const QVariantMap &event)
         QByteArray payload = QByteArray::fromBase64(payloadBase64.toLocal8Bit());
 
         parseGameEvent(cursor, nextCursor, payload);
+
+        m_currentCursor = cursor;
+        m_nextCursor = nextCursor;
     }
     else if(type == "end_game") {
         resetGameState();
@@ -46,9 +62,6 @@ void EventParser::parseGameEvent(int cursor, int nextCursor, const QByteArray &p
         return;
     }
 
-    m_currentCursor = cursor;
-    m_nextCursor = nextCursor;
-
     m_writeStream.writeRawData(payload.constData(), payload.size());
     m_availableBytes += payload.size();
 
@@ -59,7 +72,7 @@ void EventParser::parseGameEvent(int cursor, int nextCursor, const QByteArray &p
             parsePayloadSizes();
         }
         else {
-            qWarning() << "Did not get payload sizes command byte:" << QString::number(payload[0], 16);
+            //qWarning() << "Did not get payload sizes command byte:" << QString::number(payload[0], 16);
         }
     }
 
@@ -70,10 +83,12 @@ void EventParser::parseGameEvent(int cursor, int nextCursor, const QByteArray &p
             m_dataStream >> nextCommandByte;
             m_currentCommandByte = nextCommandByte;
             m_availableBytes--;
-           // qDebug() << "Next command byte:" << QString::number(m_currentCommandByte, 16);
+
+            //qDebug() << "Next command byte:" << QString::number(m_currentCommandByte, 16);
         }
         else {
-           // qDebug() << "Not reading command byte, currently:" << m_currentCommandByte << m_availableBytes;
+//            qDebug() << "Not reading command byte, currently:" << QString::number(m_currentCommandByte, 16) << m_availableBytes
+//                     << ", would be:" << QString::number(payload[0], 16);
         }
 
         moreEvents = parseCommand();
@@ -115,7 +130,7 @@ bool EventParser::parseCommand()
         return false;
     }
 
-    uint commandSize = m_payloadSizes[m_currentCommandByte];
+    uint commandSize = m_currentCommandByte > EVENT_HIGHEST ? 0 : m_payloadSizes[m_currentCommandByte];
 
     if(m_availableBytes < commandSize) {
         // command not yet received fully
@@ -123,9 +138,32 @@ bool EventParser::parseCommand()
         return false;
     }
 
+    if(m_currentCommandByte > EVENT_HIGHEST) {
+        qDebug() << "Skip unknown command:" << QString::number(m_currentCommandByte, 16) << "with payload size" << m_availableBytes;
+        m_currentCommandByte = 0;
+        m_dataStream.skipRawData(m_availableBytes);
+        m_availableBytes = 0;
+        return false;
+    }
+
     char *bytes = new char[commandSize];
     m_dataStream.readRawData(bytes, commandSize);
     m_availableBytes -= commandSize;
+
+    if(m_currentCommandByte == EVENT_SPLIT_MSG) {
+        quint8 internalCommand = bytes[commandSize - 4];
+        quint16 actualSize = *((quint16*)&bytes[commandSize - 3]);
+        bool lastMessage = bytes[commandSize - 1];
+
+        commandSize -= 4;
+
+        //qDebug() << "Reading a split message for command" << QString::number(internalCommand, 16) << ", actual size:" << actualSize << "is last:" << lastMessage;
+        Q_UNUSED(actualSize) // is always 512, or less for the last message
+
+        if(lastMessage) {
+            m_currentCommandByte = internalCommand;
+        }
+    }
 
     m_commandData.append(QByteArray::fromRawData(bytes, commandSize));
 
@@ -158,7 +196,6 @@ bool EventParser::parseCommand()
         break;
     default:
         qWarning() << "Command" << QString::number(m_currentCommandByte, 16) << "not implemented.";
-        m_dataStream.skipRawData(commandSize);
         break;
     }
 
@@ -230,7 +267,7 @@ bool EventParser::parseGameStart()
         stream.readRawData(rawCode, 10);
         QString codeStr = jisCodec->toUnicode(rawCode);
 
-        // replace Shift-JIS (Unicode 0xff03) hash with regular hash
+        // replace full-width (Unicode 0xff03) hash with regular (half-width) hash
         m_gameInfo.players[i].slippiCode = codeStr.replace(QChar(0xff03), '#');
     }
 
@@ -279,7 +316,7 @@ bool EventParser::parseGameEnd()
 void EventParser::resetGameState()
 {
     // reset state for next game:
-    m_hasPayloadSizes = false;
+    //m_hasPayloadSizes = false;
     m_dataBuffer.clear();
     m_dataStream.device()->reset();
     m_writeStream.device()->reset();

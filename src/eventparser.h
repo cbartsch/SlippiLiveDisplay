@@ -86,6 +86,7 @@ class EventParser : public QObject
     Q_PROPERTY(GameInformation gameInfo READ gameInfo NOTIFY gameInfoChanged CONSTANT)
 
     enum SlippiEvents {
+        EVENT_SPLIT_MSG     = 0x10,
         EVENT_PAYLOADS      = 0x35,
         EVENT_GAME_START    = 0x36,
         EVENT_PRE_FRAME     = 0x37,
@@ -95,8 +96,8 @@ class EventParser : public QObject
         EVENT_ITEM_UPDATE   = 0x3B,
         EVENT_FRAME_BOOKEND = 0x3c,
         EVENT_GECKO_LIST    = 0x3D,
-        EVENT_SPLIT_MSG     = 0x10,
-        EVENT_HIGHEST       = EVENT_GECKO_LIST
+        EVENT_UNKNOWN       = 0x45,
+        EVENT_HIGHEST       = EVENT_UNKNOWN
     };
 public:
     explicit EventParser(QObject *parent = nullptr);
@@ -136,7 +137,7 @@ private:
     int m_currentCursor = -1, m_nextCursor = -1;
 
     bool m_hasPayloadSizes = false;
-    quint16 m_payloadSizes[EVENT_HIGHEST + 1] = {0};
+    quint16 m_payloadSizes[EVENT_HIGHEST + 1] = { 0 };
 
     quint8 m_currentCommandByte = 0;
 

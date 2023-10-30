@@ -2,12 +2,14 @@
 
 #include <QVariant>
 #include <QTextCodec>
+#include <QtEndian>
 
 EventParser::EventParser(QObject *parent) : QObject{parent},
     m_dataStream(&m_dataBuffer, QIODevice::OpenModeFlag::ReadOnly),
     m_writeStream(&m_dataBuffer, QIODevice::OpenModeFlag::WriteOnly)
 {
     m_dataStream.setByteOrder(QDataStream::ByteOrder::BigEndian);
+    m_dataStream.setFloatingPointPrecision(QDataStream::FloatingPointPrecision::SinglePrecision);
 
     // add default values. current version of mainline beta only sends sizes for the first game of the session.
     m_payloadSizes[0x10] = 516;
@@ -21,6 +23,8 @@ EventParser::EventParser(QObject *parent) : QObject{parent},
     m_payloadSizes[0x3d] = 54480;
 
     m_payloadSizes[0x45] = 36; // some unknown command it sends if connecting to a running game
+
+    resetGameState();
 }
 
 void EventParser::parseSlippiMessage(const QVariantMap &event)
@@ -182,6 +186,7 @@ bool EventParser::parseCommand()
     case EVENT_PRE_FRAME:
         break;
     case EVENT_POST_FRAME:
+        parsePostFrame();
         break;
     case EVENT_FRAME_START:
         break;
@@ -216,7 +221,9 @@ bool EventParser::parseGameStart()
     quint8 version[4];
     stream.readRawData((char*)&version, 4);
 
-    m_gameInfo.version = QString("%1.%2.%3 (%4)").arg(version[0]).arg(version[1]).arg(version[2]).arg(version[3]);
+    GameInformation &gi = *m_gameInfo;
+
+    gi.version = QString("%1.%2.%3 (%4)").arg(version[0]).arg(version[1]).arg(version[2]).arg(version[3]);
 
     char gameInfoBlock[312];
     stream.readRawData(gameInfoBlock, 312);
@@ -224,21 +231,21 @@ bool EventParser::parseGameStart()
     QDataStream gameInfoStream(QByteArray(gameInfoBlock, 312));
     gameInfoStream.skipRawData(0x60);
 
-    for(int i = 0; i < NUM_PLAYERS; i++) {
-        gameInfoStream >> m_gameInfo.players[i].charId;
-        gameInfoStream >> m_gameInfo.players[i].playerType;
+    for(auto &player: gi.players) {
+        gameInfoStream >> player->charId;
+        gameInfoStream >> player->playerType;
 
         gameInfoStream.skipRawData(0x22);
     }
 
-    stream >> m_gameInfo.seed;
+    stream >> gi.seed;
 
-    for(int i = 0; i < NUM_PLAYERS; i++) {
-        stream >> m_gameInfo.players[i].dashbackFix;
+    for(auto &player: gi.players) {
+        stream >> player->dashbackFix;
     }
 
-    for(int i = 0; i < NUM_PLAYERS; i++) {
-        stream >> m_gameInfo.players[i].shieldDropFix;
+    for(auto &player: gi.players) {
+        stream >> player->shieldDropFix;
     }
 
     QTextCodec *jisCodec = QTextCodec::codecForName("Shift-JIS");
@@ -248,47 +255,99 @@ bool EventParser::parseGameStart()
         jisCodec = QTextCodec::codecForLocale();
     }
 
-    for(int i = 0; i < NUM_PLAYERS; i++) {
+    for(auto &player: gi.players) {
         char rawTag[16];
         stream.readRawData(rawTag, 16);
-        m_gameInfo.players[i].nameTag = jisCodec->toUnicode(rawTag);
+        player->nameTag = jisCodec->toUnicode(rawTag);
     }
 
-    stream >> m_gameInfo.isPal >> m_gameInfo.isFrozenPS >> m_gameInfo.minorScene >> m_gameInfo.majorScene;
+    stream >> gi.isPal >> gi.isFrozenPS >> gi.minorScene >> gi.majorScene;
 
-    for(int i = 0; i < NUM_PLAYERS; i++) {
+    for(auto &player: gi.players) {
         char rawName[31];
         stream.readRawData(rawName, 31);
-        m_gameInfo.players[i].slippiName = jisCodec->toUnicode(rawName);
+        player->slippiName = jisCodec->toUnicode(rawName);
     }
 
-    for(int i = 0; i < NUM_PLAYERS; i++) {
+    for(auto &player: gi.players) {
         char rawCode[10];
         stream.readRawData(rawCode, 10);
         QString codeStr = jisCodec->toUnicode(rawCode);
 
         // replace full-width (Unicode 0xff03) hash with regular (half-width) hash
-        m_gameInfo.players[i].slippiCode = codeStr.replace(QChar(0xff03), '#');
+        player->slippiCode = codeStr.replace(QChar(0xff03), '#');
     }
 
-    for(int i = 0; i < NUM_PLAYERS; i++) {
+    for(auto &player: gi.players) {
         char rawUid[29];
         stream.readRawData(rawUid, 29);
-        m_gameInfo.players[i].slippiUid = QString::fromUtf8(rawUid);
+        player->slippiUid = QString::fromUtf8(rawUid);
     }
 
-    stream >> m_gameInfo.languageOption;
+    stream >> gi.languageOption;
 
     char rawMatchId[51];
     stream.readRawData(rawMatchId, 51);
-    m_gameInfo.matchId = QString::fromUtf8(rawMatchId);
+    gi.matchId = QString::fromUtf8(rawMatchId);
 
-    stream >> m_gameInfo.gameNumber >> m_gameInfo.tiebreakerNumber;
+    stream >> gi.gameNumber >> gi.tiebreakerNumber;
 
     m_gameRunning = true;
     emit gameInfoChanged();
     emit gameRunningChanged();
     emit gameStarted();
+
+    return true;
+}
+
+bool EventParser::parsePostFrame()
+{
+
+// from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#post-frame-update
+    struct PostFrameData {
+        PostFrameData(const QByteArray &data) {
+
+            QDataStream stream(data);
+            stream.setByteOrder(QDataStream::ByteOrder::BigEndian);
+            stream.setFloatingPointPrecision(QDataStream::FloatingPointPrecision::SinglePrecision);
+
+            stream >> frameNumber >> playerIndex >> isFollower >> charId >> actionStateId
+                >> posX >> posY >> facingDirection >> percent >> shieldSize
+                >> lastHitAttackId >> comboCount >> lastHitBy >> stocks >> actionStateFrameCounter
+                >> stateBitFlag1 >> stateBitFlag2 >> stateBitFlag3 >> stateBitFlag4 >> stateBitFlag5
+                >> actionStateData >> airborne >> lastGroundId
+                >> jumpsRemaining >> lCancelStatus >> hurtboxCollisionState
+                >> xSpeedSelfAir >> ySpeedSelf >> xSpeedAttack >> ySpeedAttack >> xSpeedSelfGround
+                >> hitlagFrameRemaining >> animationIndex;
+
+        }
+
+        qint32 frameNumber;
+        quint8 playerIndex;
+        bool isFollower;
+        quint8 charId;
+        quint16 actionStateId;
+        float posX, posY, facingDirection, percent, shieldSize;
+        quint8 lastHitAttackId, comboCount, lastHitBy, stocks;
+        float actionStateFrameCounter;
+
+        union { struct { quint8 : 4; bool isReflectActive : 1;  quint8 : 3;                                                                                 }; quint8 stateBitFlag1; };
+        union { struct { quint8 : 2; bool hasIntangibility : 1; bool isFastFalling : 1;    quint8 : 1; bool isInHitlag: 1;          quint8 : 2;             }; quint8 stateBitFlag2; };
+        union { struct { quint8 : 7; bool isShieldActive : 1;                                                                                               }; quint8 stateBitFlag3; };
+        union { struct { quint8 : 2; bool isInHitStun : 1;      bool isTouchingShield : 1; quint8 : 2; bool isPowershieldActive : 1; quint8 : 2;            }; quint8 stateBitFlag4; };
+        union { struct { quint8 : 3; bool isFollowerBit : 1;    bool isSleeping: 1;        quint8 : 1; bool isDead: 1;               bool isOffscreen : 1;  }; quint8 stateBitFlag5; };
+
+        float actionStateData; // eg. hitstun remaining
+        bool airborne;
+        quint16 lastGroundId;
+        quint8 jumpsRemaining, lCancelStatus, hurtboxCollisionState;
+        float xSpeedSelfAir, ySpeedSelf, xSpeedAttack, ySpeedAttack, xSpeedSelfGround, hitlagFrameRemaining;
+        quint32 animationIndex;
+    } d(m_commandData);
+
+    PlayerInformation &player = *m_gameInfo->players[d.playerIndex];
+
+    player.setComboCount(d.comboCount);
 
     return true;
 }
@@ -322,14 +381,32 @@ void EventParser::resetGameState()
     m_writeStream.device()->reset();
     m_availableBytes = 0;
     m_currentCommandByte = 0;
-    m_gameInfo = {};
+    m_gameInfo.reset(new GameInformation(this));
 
     m_gameRunning = false;
     emit gameInfoChanged();
     emit gameRunningChanged();
 }
 
-GameInformation EventParser::gameInfo() const
+GameInformation *EventParser::gameInfo() const
 {
-    return m_gameInfo;
+    return m_gameInfo.data();
+}
+
+GameInformation::GameInformation(QObject *parent) : QObject(parent) {
+    for(int i = 0; i < NUM_PLAYERS; i++) {
+        players[i].reset(new PlayerInformation(this));
+    }
+}
+
+PlayerInformation::PlayerInformation(QObject *parent) : QObject(parent) {
+
+}
+
+void PlayerInformation::setComboCount(quint32 newComboCount)
+{
+    if (comboCount == newComboCount)
+        return;
+    comboCount = newComboCount;
+    emit comboCountChanged();
 }

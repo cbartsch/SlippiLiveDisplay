@@ -9,19 +9,28 @@
 
 const int NUM_PLAYERS = 4;
 
-struct PlayerInformation {
-    Q_GADGET
-    Q_PROPERTY(quint32 dashbackFix MEMBER dashbackFix)
-    Q_PROPERTY(quint32 shieldDropFix MEMBER shieldDropFix)
-    Q_PROPERTY(quint8 playerType MEMBER playerType)
-    Q_PROPERTY(quint8 charId MEMBER charId)
+struct PlayerInformation : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(quint32 dashbackFix MEMBER dashbackFix CONSTANT)
+    Q_PROPERTY(quint32 shieldDropFix MEMBER shieldDropFix CONSTANT)
+    Q_PROPERTY(quint8 playerType MEMBER playerType CONSTANT)
+    Q_PROPERTY(quint8 charId MEMBER charId CONSTANT)
 
-    Q_PROPERTY(QString nameTag MEMBER nameTag)
-    Q_PROPERTY(QString slippiCode MEMBER slippiCode)
-    Q_PROPERTY(QString slippiName MEMBER slippiName)
-    Q_PROPERTY(QString slippiUid MEMBER slippiUid)
+    Q_PROPERTY(QString nameTag MEMBER nameTag CONSTANT)
+    Q_PROPERTY(QString slippiCode MEMBER slippiCode CONSTANT)
+    Q_PROPERTY(QString slippiName MEMBER slippiName CONSTANT)
+    Q_PROPERTY(QString slippiUid MEMBER slippiUid CONSTANT)
+
+    Q_PROPERTY(quint32 comboCount MEMBER comboCount WRITE setComboCount NOTIFY comboCountChanged)
+
+signals:
+    void comboCountChanged();
 
 public:
+    PlayerInformation(QObject *parent = nullptr);
+
+    void setComboCount(quint32 newComboCount);
+
     enum ControllerFixType : quint32 { Off = 0, UCF = 1, Dween = 2 };
     Q_ENUM(ControllerFixType);
 
@@ -31,32 +40,34 @@ public:
     quint32 dashbackFix = Off, shieldDropFix = Off;
     quint8 charId = 0, playerType = Empty;
     QString nameTag, slippiCode, slippiName, slippiUid;
+    quint32 comboCount = 0;
 };
 Q_DECLARE_METATYPE(PlayerInformation);
 
-struct GameInformation {
-    Q_GADGET
-    Q_PROPERTY(QString version MEMBER version)
-    Q_PROPERTY(quint32 randomSeed MEMBER seed)
+struct GameInformation : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(QString version MEMBER version CONSTANT)
+    Q_PROPERTY(quint32 randomSeed MEMBER seed CONSTANT)
 
-    Q_PROPERTY(PlayerInformation player1 READ player1)
-    Q_PROPERTY(PlayerInformation player2 READ player2)
-    Q_PROPERTY(PlayerInformation player3 READ player3)
-    Q_PROPERTY(PlayerInformation player4 READ player4)
+    Q_PROPERTY(PlayerInformation *player1 READ player1 CONSTANT)
+    Q_PROPERTY(PlayerInformation *player2 READ player2 CONSTANT)
+    Q_PROPERTY(PlayerInformation *player3 READ player3 CONSTANT)
+    Q_PROPERTY(PlayerInformation *player4 READ player4 CONSTANT)
 
+    Q_PROPERTY(quint8 isPal MEMBER isPal CONSTANT)
+    Q_PROPERTY(quint8 isFrozenPS MEMBER isFrozenPS CONSTANT)
+    Q_PROPERTY(quint8 minorScene MEMBER minorScene CONSTANT)
+    Q_PROPERTY(quint8 majorScene MEMBER majorScene CONSTANT)
 
-    Q_PROPERTY(quint8 isPal MEMBER isPal)
-    Q_PROPERTY(quint8 isFrozenPS MEMBER isFrozenPS)
-    Q_PROPERTY(quint8 minorScene MEMBER minorScene)
-    Q_PROPERTY(quint8 majorScene MEMBER majorScene)
+    Q_PROPERTY(quint8 languageOption MEMBER languageOption CONSTANT)
 
-    Q_PROPERTY(quint8 languageOption MEMBER languageOption)
-
-    Q_PROPERTY(QString matchId MEMBER matchId)
-    Q_PROPERTY(quint32 gameNumber MEMBER gameNumber)
-    Q_PROPERTY(quint32 tiebreakerNumber MEMBER tiebreakerNumber)
+    Q_PROPERTY(QString matchId MEMBER matchId CONSTANT)
+    Q_PROPERTY(quint32 gameNumber MEMBER gameNumber CONSTANT)
+    Q_PROPERTY(quint32 tiebreakerNumber MEMBER tiebreakerNumber CONSTANT)
 
 public:
+    GameInformation(QObject *parent = nullptr);
+
     QString version;
     quint32 seed = 0;
     quint8 isPal = 0, isFrozenPS = 0, minorScene = 0, majorScene = 0;
@@ -65,13 +76,12 @@ public:
     QString matchId;
     quint32 gameNumber = 0, tiebreakerNumber = 0;
 
-    PlayerInformation &player1() { return players[0]; }
-    PlayerInformation &player2() { return players[1]; }
-    PlayerInformation &player3() { return players[2]; }
-    PlayerInformation &player4() { return players[3]; }
+    PlayerInformation *player1() { return players[0].data(); }
+    PlayerInformation *player2() { return players[1].data(); }
+    PlayerInformation *player3() { return players[2].data(); }
+    PlayerInformation *player4() { return players[3].data(); }
 
-    PlayerInformation players[NUM_PLAYERS];
-    PlayerInformation emptyPlayer;
+    QScopedPointer<PlayerInformation> players[NUM_PLAYERS];
 };
 
 class EventParser : public QObject
@@ -83,8 +93,9 @@ class EventParser : public QObject
 
     Q_PROPERTY(bool gameRunning MEMBER m_gameRunning NOTIFY gameRunningChanged)
 
-    Q_PROPERTY(GameInformation gameInfo READ gameInfo NOTIFY gameInfoChanged CONSTANT)
+    Q_PROPERTY(GameInformation *gameInfo READ gameInfo NOTIFY gameInfoChanged)
 
+    // events from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#events
     enum SlippiEvents {
         EVENT_SPLIT_MSG     = 0x10,
         EVENT_PAYLOADS      = 0x35,
@@ -104,7 +115,7 @@ public:
 
     Q_INVOKABLE void parseSlippiMessage(const QVariantMap &event);
 
-    GameInformation gameInfo() const; 
+    GameInformation *gameInfo() const;
 
     enum GameEndMethod {
         Unresolved = 0, Resolved = 3,
@@ -125,6 +136,7 @@ private:
     void parsePayloadSizes();
     bool parseCommand();
     bool parseGameStart();
+    bool parsePostFrame();
     bool parseGameEnd();
     void resetGameState();
 
@@ -147,7 +159,7 @@ private:
 
     QByteArray m_commandData;
 
-    GameInformation m_gameInfo;
+    QScopedPointer<GameInformation> m_gameInfo;
 };
 
 #endif // EVENTPARSER_H

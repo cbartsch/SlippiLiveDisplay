@@ -24,6 +24,8 @@ Item {
   ? rank ? "https://slippi.gg/" + rank.imageUrl : ""
   : "https://slippi.gg/static/media/rank_Unranked3.0f639e8b73090a7ba4a50f7bcc272f57.svg"
 
+  readonly property bool showCombo: player.comboCount > 1
+
   Window {
     id: overlayWindow
     x: playerOverlay.x
@@ -61,6 +63,7 @@ Item {
     }
 
     Column {
+      visible: !showCombo
       anchors.verticalCenter: parent.verticalCenter
       anchors.left: rtl ? undefined : parent.left
       anchors.right: rtl ? parent.right : undefined
@@ -81,6 +84,21 @@ Item {
       CustomText {
         textItem.width: overlayWindow.width
         textItem.text: player.slippiCode || ""
+        textItem.font.pixelSize: 70
+        textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
+        textItem.font.family: "VCR OSD Mono"
+        shadowItem.radius: 6.0
+        shadowItem.samples: 20
+      }
+    }
+
+    Item {
+      visible: showCombo
+      anchors.verticalCenter: parent.verticalCenter
+
+      CustomText {
+        textItem.width: overlayWindow.width
+        textItem.text: "Combo x%1".arg(player.comboCount)
         textItem.font.pixelSize: 70
         textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
         textItem.font.family: "VCR OSD Mono"

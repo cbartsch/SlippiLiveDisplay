@@ -221,6 +221,7 @@ bool EventParser::parseGameStart()
     quint8 version[4];
     stream.readRawData((char*)&version, 4);
 
+    m_gameInfo.reset(new GameInformation(this));
     GameInformation &gi = *m_gameInfo;
 
     gi.version = QString("%1.%2.%3 (%4)").arg(version[0]).arg(version[1]).arg(version[2]).arg(version[3]);
@@ -302,8 +303,7 @@ bool EventParser::parseGameStart()
 
 bool EventParser::parsePostFrame()
 {
-
-// from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#post-frame-update
+    // from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#post-frame-update
     struct PostFrameData {
         PostFrameData(const QByteArray &data) {
 
@@ -381,7 +381,7 @@ void EventParser::resetGameState()
     m_writeStream.device()->reset();
     m_availableBytes = 0;
     m_currentCommandByte = 0;
-    m_gameInfo.reset(new GameInformation(this));
+    m_gameInfo.reset(nullptr);
 
     m_gameRunning = false;
     emit gameInfoChanged();

@@ -19,18 +19,19 @@ AppPage {
     AppListItem {
       enabled: false
       text: "Slippi game running: %1, version: %2"
-      .arg(parser.gameRunning ? "Yes" : "No")
-      .arg(parser.gameInfo.version)
+      .arg(parser.gameInfo ? "Yes" : "No")
+      .arg(parser.gameInfo?.version ?? "unknown")
 
-      detailText: "AL: %2, frozen PS: %3, minor scene: %4, major scene: %5"
-      .arg(parser.gameInfo.isPal)
-      .arg(parser.gameInfo.isFrozenPS)
-      .arg(parser.gameInfo.minorScene)
-      .arg(parser.gameInfo.majorScene)
+      detailText: parser.gameInfo ? "AL: %2, frozen PS: %3, minor scene: %4, major scene: %5"
+                                    .arg(parser.gameInfo.isPal)
+                                    .arg(parser.gameInfo.isFrozenPS)
+                                    .arg(parser.gameInfo.minorScene)
+                                    .arg(parser.gameInfo.majorScene)
+                                  : "No game running"
     }
 
     AppListItem {
-      text: "Current match ID: " + parser.gameInfo.matchId
+      text: "Current match ID: " + parser.gameInfo?.matchId ?? "unknown"
       detailText: "Scores: " + dataModel.playerScores.join(" - ")
     }
 

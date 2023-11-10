@@ -49,11 +49,13 @@ Item {
   ]
 
   readonly property string gameType: {
-    var mId = parser.gameInfo.matchId
+    if(!parser.gameInfo) return ""
+
+    var mId = parser.gameInfo?.matchId ?? ""
     if(mId.startsWith("mode.unranked")) return "Unranked"
     if(mId.startsWith("mode.ranked")) return "Ranked"
     if(mId.startsWith("mode.direct")) return "Direct"
-    return ""
+    return "Unknown"
   }
 
   function getSlippiProfile(player) {

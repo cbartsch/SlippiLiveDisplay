@@ -26,7 +26,7 @@ App {
     id: parser
 
     onConnectedChanged: console.log("Connected to Slippi changed:", connected)
-    onGameRunningChanged: console.log("Slippi game running changed:", gameRunning, gameInfo.matchId)
+    onGameRunningChanged: console.log("Slippi game running changed:", gameRunning, gameInfo?.matchId)
 
     onGameStarted: dataModel.onGameStarted()
     onGameEnded: (gameEndMethod, lrasPlayer, playerPlacements) => dataModel.onGameEnded(gameEndMethod, lrasPlayer, playerPlacements)
@@ -62,30 +62,39 @@ App {
     InfoPage { }
   }
 
-  GameOverlay {
-    gameType: dataModel.gameType
-    gameNumber: parser.gameInfo.gameNumber
-    scoreP1: dataModel.playerScores[0]
-    scoreP2: dataModel.playerScores[1]
+  Window {
+    flags: Qt.Dialog | Qt.FramelessWindowHint
+    visible: true
 
+    title: "Overlay"
+    width: gameOverlay.width
+    height: gameOverlay.height * 3 + 40
     x: app.x + app.width
     y: app.y
-  }
+    color: "transparent"
 
-  Repeater {
-    model: 2
+    GameOverlay {
+      id: gameOverlay
+      gameType: dataModel.gameType
+      gameNumber: parser.gameInfo?.gameNumber ?? 0
+      scoreP1: dataModel.playerScores[0]
+      scoreP2: dataModel.playerScores[1]
+    }
 
-    PlayerOverlay {
-      playerNum: index + 1
+    Repeater {
+      model: 2
 
-      player: [parser.gameInfo.player1, parser.gameInfo.player2][index]
-      profile: dataModel.netplayProfiles && dataModel.netplayProfiles[player.slippiCode] || null
-      rank: profile ? dataModel.getRank(profile.ratingOrdinal) : null
+      PlayerOverlay {
+        player: parser.gameInfo ? [parser.gameInfo.player1, parser.gameInfo.player2][index] : null
+        playerNum: index + 1
 
-      rtl: playerNum === 2
+        profile: dataModel.netplayProfiles && dataModel.netplayProfiles[player?.slippiCode] || null
+        rank: profile ? dataModel.getRank(profile.ratingOrdinal) : null
 
-      x: app.x + app.width
-      y: app.y + (height + 50) * (index + 1)
+        rtl: playerNum === 2
+
+        y: (height + 20) * (index + 1)
+      }
     }
   }
 }

@@ -5,15 +5,11 @@ import Qt5Compat.GraphicalEffects
 
 import "../controls"
 
-Window {
+Rectangle {
   id: gameOverlay
   width: 440
   height: 130
-  visible: true
-  title: "Game"
   color: "transparent"
-
-  flags: Qt.Dialog | Qt.FramelessWindowHint
 
   property string gameType
   property int gameNumber

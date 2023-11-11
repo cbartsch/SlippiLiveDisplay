@@ -71,13 +71,11 @@ void EventParser::parseGameEvent(int cursor, int nextCursor, const QByteArray &p
 
     //qDebug() << "Feed" << payload.size() << "bytes, available now:" << m_availableBytes;
 
-    if(!m_hasPayloadSizes) {
-        if(payload[0] == EVENT_PAYLOADS) {
-            parsePayloadSizes();
-        }
-        else {
-            //qWarning() << "Did not get payload sizes command byte:" << QString::number(payload[0], 16);
-        }
+    if(payload[0] == EVENT_PAYLOADS) {
+        parsePayloadSizes();
+    }
+    else {
+        //qWarning() << "Did not get payload sizes command byte:" << QString::number(payload[0], 16);
     }
 
     bool moreEvents = true;
@@ -172,7 +170,7 @@ bool EventParser::parseCommand()
     m_commandData.append(QByteArray::fromRawData(bytes, commandSize));
 
     if(m_currentCommandByte != EVENT_SPLIT_MSG) {
-    //    qDebug() << "Parse command" << QString::number(m_currentCommandByte, 16) << "with" << m_commandData.size() << "bytes payload.";
+        qDebug() << "Parse command" << QString::number(m_currentCommandByte, 16) << "with" << m_commandData.size() << "bytes payload.";
     }
 
     // can now fully read the command

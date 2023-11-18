@@ -33,18 +33,27 @@ Rectangle {
                                   ? rank ? "https://slippi.gg/" + rank.imageUrl : ""
   : "https://slippi.gg/static/media/rank_Unranked3.0f639e8b73090a7ba4a50f7bcc272f57.svg"
 
-  readonly property int comboCount:    player?.comboCount    ?? 0
-  readonly property int lCancelState:  player?.lCancelState  ?? PlayerInformation.Unknown
-  readonly property int lCancelFrames: player?.lCancelFrames || 0
-  readonly property int wavedashFrame: player?.wavedashFrame || 0
+  readonly property int comboCount:          player?.comboCount          ?? 0
+  readonly property int lCancelState:        player?.lCancelState        ?? PlayerInformation.Unknown
+  readonly property int lCancelFrames:       player?.lCancelFrames       || 0
+  readonly property int wavedashFrame:       player?.wavedashFrame       || 0
+  readonly property int intangibilityFrames: player?.intangibilityFrames || 0
+  readonly property int galintFrames: Math.max(0, intangibilityFrames - 10) // subtract 10 frames of landing lag
+  readonly property bool isLedgedash: intangibilityFrames > 0
 
   onComboCountChanged:    if(comboCount > 1)                                       showOverlay({ text: "Combo x%1".arg(comboCount), duration: 1000 })
   onLCancelStateChanged:  if(lCancelState === PlayerInformation.Successful)        showOverlay({ text: "L-Cancel\nsuccess: %1/7".arg(lCancelFrames), color: Qt.hsva(0.33, 0.4, 1) })
                           else if(lCancelState === PlayerInformation.Unsuccessful) showOverlay({ text: "L-Cancel\nfailed: %1/7".arg(lCancelFrames),  color: Qt.hsva(0.00, 0.4, 1) })
 
   onWavedashFrameChanged: if(wavedashFrame > 0)                                    showOverlay({
-                                                                                                 text: "Wavedash\nFrame %1 %2°".arg(wavedashFrame).arg(player.wavedashAngle.toFixed(1)),
-                                                                                                 duration: 1000, color: Qt.hsva(0.33, 0.08 * Math.max(0, 6 - wavedashFrame), 1)
+                                                                                                 text: isLedgedash
+                                                                                                       ? "Ledgedash\nGALINT: %3".arg(galintFrames)
+                                                                                                       : "Wavedash\nFrame %1 %2°".arg(wavedashFrame).arg(player.wavedashAngle.toFixed(1)),
+                                                                                                 duration: 1000,
+                                                                                                 color: Qt.hsva(0.33, 0.4 * Math.max(0, isLedgedash
+                                                                                                                                     ? (galintFrames) / 10
+                                                                                                                                     : (6 - wavedashFrame) / 5),
+                                                                                                                1)
                                                                                                })
 
 
@@ -155,9 +164,19 @@ Rectangle {
           duration: 200
         }
 
-        PauseAnimation {
-          id: pauseTimer
-          duration: 500
+        ParallelAnimation {
+          PauseAnimation {
+            id: pauseTimer
+            duration: 500
+          }
+          PropertyAnimation {
+            target: overlayItem
+            property: "opacity"
+            //easing.type: Easing.OutQuad
+            from: 1
+            to: 0.5
+            duration: pauseTimer.duration
+          }
         }
 
         PropertyAnimation {

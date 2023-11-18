@@ -24,6 +24,7 @@ struct PlayerInformation : public QObject {
     Q_PROPERTY(quint32 comboCount MEMBER comboCount WRITE setComboCount NOTIFY comboCountChanged)
     Q_PROPERTY(LCancelState lCancelState MEMBER lCancelState WRITE setLCancelState NOTIFY lCancelStateChanged)
     Q_PROPERTY(int lCancelFrames MEMBER framesSinceLCancel NOTIFY lCancelFramesChanged)
+    Q_PROPERTY(int intangibilityFrames MEMBER intangibilityFrames NOTIFY intangibilityFramesChanged)
     Q_PROPERTY(int wavedashFrame MEMBER wavedashFrame NOTIFY wavedashChanged)
     Q_PROPERTY(qreal wavedashAngle MEMBER wavedashAngle NOTIFY wavedashChanged)
 
@@ -31,6 +32,7 @@ signals:
     void comboCountChanged();
     void lCancelStateChanged();
     void lCancelFramesChanged();
+    void intangibilityFramesChanged();
     void wavedashChanged();
 
 public:
@@ -57,6 +59,7 @@ public:
     quint32 comboCount = 0;
     LCancelState lCancelState = Unknown;
     int wavedashFrame = 0;
+    int intangibilityFrames = 0;
     qreal wavedashAngle = 0;
 };
 Q_DECLARE_METATYPE(PlayerInformation);

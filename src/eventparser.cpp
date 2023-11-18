@@ -303,9 +303,9 @@ bool EventParser::parseGameStart()
 
 bool EventParser::parsePreFrame()
 {
-    // from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#post-frame-update
-    struct PostFrameData {
-        PostFrameData(const QByteArray &data) {
+    // from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#pre-frame-update
+    struct PreFrameData {
+        PreFrameData(const QByteArray &data) {
 
             QDataStream stream(data);
             stream.setByteOrder(QDataStream::ByteOrder::BigEndian);
@@ -418,6 +418,17 @@ bool EventParser::parsePostFrame()
 
     PlayerInformation &player = *m_gameInfo->players[d.playerIndex];
 
+    // CliffWait - get 30 intangibility frames
+    if(d.actionStateId == 253 && player.intangibilityFrames == 0) {
+        player.intangibilityFrames = 31;
+    }
+
+    if(player.intangibilityFrames > 0) {
+        player.intangibilityFrames--;
+        emit player.intangibilityFramesChanged();
+    }
+
+    // LandingFallSpecial - landing lag after free fall or airdodge
     if(d.actionStateId == 43 && d.actionStateFrameCounter == 0) {
         // first frame of LandingFallSpecial
         QVector2D speedVector(d.xSpeedSelfGround, d.ySpeedSelf);

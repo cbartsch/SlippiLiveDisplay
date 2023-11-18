@@ -23,12 +23,14 @@ struct PlayerInformation : public QObject {
 
     Q_PROPERTY(quint32 comboCount MEMBER comboCount WRITE setComboCount NOTIFY comboCountChanged)
     Q_PROPERTY(LCancelState lCancelState MEMBER lCancelState WRITE setLCancelState NOTIFY lCancelStateChanged)
+    Q_PROPERTY(int lCancelFrames MEMBER framesSinceLCancel NOTIFY lCancelFramesChanged)
     Q_PROPERTY(int wavedashFrame MEMBER wavedashFrame NOTIFY wavedashChanged)
     Q_PROPERTY(qreal wavedashAngle MEMBER wavedashAngle NOTIFY wavedashChanged)
 
 signals:
     void comboCountChanged();
     void lCancelStateChanged();
+    void lCancelFramesChanged();
     void wavedashChanged();
 
 public:
@@ -47,6 +49,8 @@ public:
     void setLCancelState(const LCancelState &newLCancelState);
     void setWavedash(int frame, qreal angle);
 
+    bool isLCancel = false;
+    int framesSinceLCancel = 0;
     quint32 dashbackFix = Off, shieldDropFix = Off;
     quint8 charId = 0, playerType = Empty;
     QString nameTag, slippiCode, slippiName, slippiUid;
@@ -149,6 +153,7 @@ private:
     void parsePayloadSizes();
     bool parseCommand();
     bool parseGameStart();
+    bool parsePreFrame();
     bool parsePostFrame();
     bool parseGameEnd();
     void resetGameState();

@@ -183,6 +183,7 @@ bool EventParser::parseCommand()
         parseGameStart();
         break;
     case EVENT_PRE_FRAME:
+        parsePreFrame();
         break;
     case EVENT_POST_FRAME:
         parsePostFrame();
@@ -296,6 +297,77 @@ bool EventParser::parseGameStart()
     emit gameInfoChanged();
     emit gameRunningChanged();
     emit gameStarted();
+
+    return true;
+}
+
+bool EventParser::parsePreFrame()
+{
+    // from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#post-frame-update
+    struct PostFrameData {
+        PostFrameData(const QByteArray &data) {
+
+            QDataStream stream(data);
+            stream.setByteOrder(QDataStream::ByteOrder::BigEndian);
+            stream.setFloatingPointPrecision(QDataStream::FloatingPointPrecision::SinglePrecision);
+
+            stream >> frameNumber >> playerIndex >> isFollower >> randomSeed >> actionStateId
+                >> posX >> posY >> facingDirection >> joyStickX >> joyStickY >> cstickX >> cstickY >> triggerValue
+                >> processedButtonsData >> physicalButtonsData
+                >> physicalLTrigger >> physicalRTrigger
+                >> ucfX >> percent >> ucfY;
+
+        }
+
+        qint32 frameNumber;
+        quint8 playerIndex;
+        bool isFollower;
+        quint32 randomSeed;
+        quint16 actionStateId;
+        float posX, posY, facingDirection,
+            joyStickX, joyStickY, cstickX, cstickY, triggerValue;
+
+        struct Buttons {
+            bool dpadLeft : 1, dpadRight : 1, dpadDown: 1, dpadUp: 1;
+            bool z : 1, r : 1, l : 1;
+            bool unused : 1;
+            bool a : 1, b : 1, x : 1, y : 1;
+            bool start : 1;
+            quint8 unused2 : 3;
+        };
+
+        struct ProcessedButtons {
+            Buttons physicalButtons;
+            bool joyStickUp : 1, joyStickDown : 1, joyStickLeft: 1, joyStickRight: 1;
+            bool cStickUp : 1, cStickDown : 1, cStickLeft: 1, cStickRight: 1;
+            quint8 unused : 7;
+            bool anyTrigger : 1;
+        };
+
+        union { ProcessedButtons processedButtons; quint32 processedButtonsData; };
+        union { Buttons physicalButtons;           quint16 physicalButtonsData;  };
+
+        float physicalLTrigger, physicalRTrigger;
+        qint8 ucfX;
+        float percent;
+        qint8 ucfY;
+
+    } d(m_commandData);
+
+    PlayerInformation &player = *m_gameInfo->players[d.playerIndex];
+
+    bool analogTriggerHeld = d.processedButtons.anyTrigger || d.processedButtons.physicalButtons.z;
+    bool isLCancel = analogTriggerHeld;
+    if(isLCancel && !player.isLCancel) {
+        player.framesSinceLCancel = 0;
+    }
+
+    player.isLCancel = isLCancel;
+
+    if(isLCancel || player.framesSinceLCancel > 0) {
+        player.framesSinceLCancel++;
+        emit player.lCancelFramesChanged();
+    }
 
     return true;
 }

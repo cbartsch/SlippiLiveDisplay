@@ -35,11 +35,12 @@ Rectangle {
 
   readonly property int comboCount:    player?.comboCount    ?? 0
   readonly property int lCancelState:  player?.lCancelState  ?? PlayerInformation.Unknown
+  readonly property int lCancelFrames: player?.lCancelFrames || 0
   readonly property int wavedashFrame: player?.wavedashFrame || 0
 
   onComboCountChanged:    if(comboCount > 1)                                       showOverlay({ text: "Combo x%1".arg(comboCount), duration: 1000 })
-  onLCancelStateChanged:  if(lCancelState === PlayerInformation.Successful)        showOverlay({ text: "L-Cancel\nsuccess!", color: Qt.hsva(0.33, 0.4, 1) })
-                          else if(lCancelState === PlayerInformation.Unsuccessful) showOverlay({ text: "L-Cancel\nfailed!",  color: Qt.hsva(0.00, 0.4, 1) })
+  onLCancelStateChanged:  if(lCancelState === PlayerInformation.Successful)        showOverlay({ text: "L-Cancel\nsuccess: %1/7".arg(lCancelFrames), color: Qt.hsva(0.33, 0.4, 1) })
+                          else if(lCancelState === PlayerInformation.Unsuccessful) showOverlay({ text: "L-Cancel\nfailed: %1/7".arg(lCancelFrames),  color: Qt.hsva(0.00, 0.4, 1) })
 
   onWavedashFrameChanged: if(wavedashFrame > 0)                                    showOverlay({
                                                                                                  text: "Wavedash\nFrame %1 %2°".arg(wavedashFrame).arg(player.wavedashAngle.toFixed(1)),

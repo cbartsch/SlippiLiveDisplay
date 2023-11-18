@@ -3,6 +3,7 @@
 #include <QVariant>
 #include <QTextCodec>
 #include <QtEndian>
+#include <QVector2D>
 
 EventParser::EventParser(QObject *parent) : QObject{parent},
     m_dataStream(&m_dataBuffer, QIODevice::OpenModeFlag::ReadOnly),
@@ -170,7 +171,7 @@ bool EventParser::parseCommand()
     m_commandData.append(QByteArray::fromRawData(bytes, commandSize));
 
     if(m_currentCommandByte != EVENT_SPLIT_MSG) {
-        qDebug() << "Parse command" << QString::number(m_currentCommandByte, 16) << "with" << m_commandData.size() << "bytes payload.";
+        //qDebug() << "Parse command" << QString::number(m_currentCommandByte, 16) << "with" << m_commandData.size() << "bytes payload.";
     }
 
     // can now fully read the command
@@ -345,7 +346,34 @@ bool EventParser::parsePostFrame()
 
     PlayerInformation &player = *m_gameInfo->players[d.playerIndex];
 
+    if(d.actionStateId == 43 && d.actionStateFrameCounter == 0) {
+        // first frame of LandingFallSpecial
+        QVector2D speedVector(d.xSpeedSelfGround, d.ySpeedSelf);
+        qreal wdTiming = qLn(speedVector.length() / 3.1) / qLn(0.9);
+        qreal fractionalPart = qAbs(wdTiming - qRound(wdTiming));
+
+
+        if(fractionalPart > 0.001) {
+            // not a wavedash if the speed isn't directly influenced by the airdodge (3.1 * 0.9 ^ nFrames)
+            // TODO implement a better detection for this
+            player.setWavedash(0, 0);
+            qDebug() << "Not a wavedash:" << wdTiming << fractionalPart;
+        }
+        else {
+            float angle = M_PI + qAtan2(d.ySpeedSelf, d.xSpeedSelfGround);
+            if(angle > M_PI_2) {
+                angle = M_PI - angle;
+            }
+
+            player.setWavedash(qRound(wdTiming), angle * 180 / M_PI);
+        }
+    }
+    else {
+        player.setWavedash(0, 0);
+    }
+
     player.setComboCount(d.comboCount);
+    player.setLCancelState(PlayerInformation::LCancelState(d.lCancelStatus));
 
     return true;
 }
@@ -407,4 +435,22 @@ void PlayerInformation::setComboCount(quint32 newComboCount)
         return;
     comboCount = newComboCount;
     emit comboCountChanged();
+}
+
+void PlayerInformation::setLCancelState(const LCancelState &newLCancelState)
+{
+    if (lCancelState == newLCancelState)
+        return;
+    lCancelState = newLCancelState;
+    emit lCancelStateChanged();
+}
+
+void PlayerInformation::setWavedash(int frame, qreal angle)
+{
+    if(frame == wavedashFrame && angle == wavedashAngle)
+        return;
+
+    wavedashFrame = frame;
+    wavedashAngle = angle;
+    emit wavedashChanged();
 }

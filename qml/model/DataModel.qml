@@ -55,7 +55,7 @@ Item {
     if(mId.startsWith("mode.unranked")) return "Unranked"
     if(mId.startsWith("mode.ranked")) return "Ranked"
     if(mId.startsWith("mode.direct")) return "Direct"
-    return "Unknown"
+    return ""
   }
 
   function getSlippiProfile(player) {

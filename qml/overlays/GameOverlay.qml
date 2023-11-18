@@ -7,9 +7,13 @@ import "../controls"
 
 Rectangle {
   id: gameOverlay
-  width: 440
-  height: 130
+
+  width: 440 + 2*border.width
+  height: 130 + 2*border.width
+
   color: "transparent"
+  border.color: "white"
+  border.width: 2
 
   property string gameType
   property int gameNumber

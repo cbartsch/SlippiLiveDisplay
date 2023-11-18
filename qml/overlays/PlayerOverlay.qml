@@ -10,10 +10,13 @@ import "../controls"
 Rectangle {
   id: playerOverlay
 
-  width: 440
-  height: 130
+  width: 440 + 2*border.width
+  height: 130 + 2*border.width
 
   color: "transparent"
+  border.color: "white"
+  border.width: 2
+
   clip: true
 
   property int playerNum
@@ -30,9 +33,19 @@ Rectangle {
                                   ? rank ? "https://slippi.gg/" + rank.imageUrl : ""
   : "https://slippi.gg/static/media/rank_Unranked3.0f639e8b73090a7ba4a50f7bcc272f57.svg"
 
-  readonly property int comboCount: player?.comboCount ?? 0
+  readonly property int comboCount:    player?.comboCount    ?? 0
+  readonly property int lCancelState:  player?.lCancelState  ?? PlayerInformation.Unknown
+  readonly property int wavedashFrame: player?.wavedashFrame || 0
 
-  onComboCountChanged: if(comboCount > 1) comboItemC.createObject(playerOverlay, { comboCount: comboCount })
+  onComboCountChanged:    if(comboCount > 1)                                       showOverlay({ text: "Combo x%1".arg(comboCount), duration: 1000 })
+  onLCancelStateChanged:  if(lCancelState === PlayerInformation.Successful)        showOverlay({ text: "L-Cancel\nsuccess!", color: Qt.hsva(0.33, 0.4, 1) })
+                          else if(lCancelState === PlayerInformation.Unsuccessful) showOverlay({ text: "L-Cancel\nfailed!",  color: Qt.hsva(0.00, 0.4, 1) })
+
+  onWavedashFrameChanged: if(wavedashFrame > 0)                                    showOverlay({
+                                                                                                 text: "Wavedash\nFrame %1 %2°".arg(wavedashFrame).arg(player.wavedashAngle.toFixed(1)),
+                                                                                                 duration: 1000, color: Qt.hsva(0.33, 0.08 * Math.max(0, 6 - wavedashFrame), 1)
+                                                                                               })
+
 
   AppImage {
     id: rankImg
@@ -89,18 +102,23 @@ Rectangle {
     }
   }
 
+  function showOverlay(properties) {
+     // console.log("Show overlay:", properties.text)
+     overlayItemC.createObject(playerOverlay, properties)
+  }
+
   Component {
-    id: comboItemC
+    id: overlayItemC
 
     Item {
-      id: comboItem
+      id: overlayItem
 
-      property int comboCount
+      property alias text: textItem.textItem.text
+      property alias font: textItem.textItem.font
+      property alias color: textItem.textItem.color
+      property alias duration: pauseTimer.duration
 
-      Component.onCompleted: {
-        console.log("Player combo:", comboCount)
-        comboAnim.start()
-      }
+      Component.onCompleted: comboAnim.start()
 
       anchors.verticalCenterOffset: playerOverlay.height
       anchors.verticalCenter: parent.verticalCenter
@@ -108,12 +126,18 @@ Rectangle {
       height: parent.height
 
       CustomText {
+        id: textItem
         anchors.verticalCenter: parent.verticalCenter
         textItem.width: playerOverlay.width
-        textItem.text: "Combo x%1".arg(comboItem.comboCount)
-        textItem.font.pixelSize: 70
+
+        textItem.maximumLineCount: 2
+        textItem.elide: Text.ElideRight
+        textItem.font.pixelSize: 50
         textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
         textItem.font.family: "VCR OSD Mono"
+        textItem.leftPadding: 4
+        textItem.rightPadding: 4
+        textItem.color: "white"
         shadowItem.radius: 6.0
         shadowItem.samples: 20
       }
@@ -122,29 +146,30 @@ Rectangle {
         id: comboAnim
 
         PropertyAnimation {
-          target: comboItem
+          target: overlayItem
           property: "anchors.verticalCenterOffset"
           easing.type: Easing.OutQuad
           from: -playerOverlay.height
           to: 0
-          duration: 250
+          duration: 200
         }
 
         PauseAnimation {
-          duration: 1000
+          id: pauseTimer
+          duration: 500
         }
 
         PropertyAnimation {
-          target: comboItem
+          target: overlayItem
           property: "anchors.verticalCenterOffset"
           easing.type: Easing.InQuad
           from: 0
           to: playerOverlay.height
-          duration: 250
+          duration: 200
         }
 
         ScriptAction {
-          script: comboItem.destroy()
+          script: overlayItem.destroy()
         }
       }
     }

@@ -22,14 +22,17 @@ struct PlayerInformation : public QObject {
     Q_PROPERTY(QString slippiUid MEMBER slippiUid CONSTANT)
 
     Q_PROPERTY(quint32 comboCount MEMBER comboCount WRITE setComboCount NOTIFY comboCountChanged)
+    Q_PROPERTY(LCancelState lCancelState MEMBER lCancelState WRITE setLCancelState NOTIFY lCancelStateChanged)
+    Q_PROPERTY(int wavedashFrame MEMBER wavedashFrame NOTIFY wavedashChanged)
+    Q_PROPERTY(qreal wavedashAngle MEMBER wavedashAngle NOTIFY wavedashChanged)
 
 signals:
     void comboCountChanged();
+    void lCancelStateChanged();
+    void wavedashChanged();
 
 public:
     PlayerInformation(QObject *parent = nullptr);
-
-    void setComboCount(quint32 newComboCount);
 
     enum ControllerFixType : quint32 { Off = 0, UCF = 1, Dween = 2 };
     Q_ENUM(ControllerFixType);
@@ -37,10 +40,20 @@ public:
     enum PlayerType : quint8 { Human = 0, CPU = 1, Demo = 2, Empty = 3};
     Q_ENUM(PlayerType);
 
+    enum LCancelState : quint8 { Unknown = 0, Successful = 1, Unsuccessful = 2};
+    Q_ENUM(LCancelState);
+
+    void setComboCount(quint32 newComboCount);
+    void setLCancelState(const LCancelState &newLCancelState);
+    void setWavedash(int frame, qreal angle);
+
     quint32 dashbackFix = Off, shieldDropFix = Off;
     quint8 charId = 0, playerType = Empty;
     QString nameTag, slippiCode, slippiName, slippiUid;
     quint32 comboCount = 0;
+    LCancelState lCancelState = Unknown;
+    int wavedashFrame = 0;
+    qreal wavedashAngle = 0;
 };
 Q_DECLARE_METATYPE(PlayerInformation);
 

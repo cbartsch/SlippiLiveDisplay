@@ -428,6 +428,25 @@ bool EventParser::parsePostFrame()
         emit player.intangibilityFramesChanged();
     }
 
+    bool falling = d.airborne && d.ySpeedSelf < 0;
+
+    if(falling != player.isFalling) {
+        player.framesSinceFall = 0;
+        player.isFalling = falling;
+    }
+
+    // note: the fastFalling flag is true on the frame after inputting fast fall
+    // thus increment the frames afterwards so frame 1 does not output frame 2
+    if(d.isFastFalling != player.isFastFalling) {
+        player.isFastFalling = d.isFastFalling;
+        emit player.isFastFallingChanged();
+    }
+
+    if(falling) {
+        player.framesSinceFall++;
+        emit player.framesSinceFallChanged();
+    }
+
     // LandingFallSpecial - landing lag after free fall or airdodge
     if(d.actionStateId == 43 && d.actionStateFrameCounter == 0) {
         // first frame of LandingFallSpecial

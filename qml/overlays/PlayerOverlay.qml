@@ -29,7 +29,7 @@ Rectangle {
   Component.onCompleted: console.log("created overlay:", player, player?.nameTag)
   onPlayerChanged: console.log("player changed:", player, player?.nameTag)
 
-  readonly property url imageUrl: profile && profile.ratingUpdateCount > 0
+  readonly property url imageUrl: profile && profile.ratingUpdateCount > 1
                                   ? rank ? "https://slippi.gg/" + rank.imageUrl : ""
   : "https://slippi.gg/static/media/rank_Unranked3.0f639e8b73090a7ba4a50f7bcc272f57.svg"
 
@@ -38,12 +38,24 @@ Rectangle {
   readonly property int lCancelFrames:       player?.lCancelFrames       || 0
   readonly property int wavedashFrame:       player?.wavedashFrame       || 0
   readonly property int intangibilityFrames: player?.intangibilityFrames || 0
+  readonly property bool isFastFalling:      player?.isFastFalling       ?? false
   readonly property int galintFrames: Math.max(0, intangibilityFrames - 10) // subtract 10 frames of landing lag
   readonly property bool isLedgedash: intangibilityFrames > 0
 
+  readonly property var allOverlays: []
+
+  signal showingOverlay(Item overlay)
+  signal removingOverlay(Item overlay)
+
   onComboCountChanged:    if(comboCount > 1)                                       showOverlay({ text: "Combo x%1".arg(comboCount), duration: 1000 })
+
   onLCancelStateChanged:  if(lCancelState === PlayerInformation.Successful)        showOverlay({ text: "L-Cancel\nsuccess: %1/7".arg(lCancelFrames), color: Qt.hsva(0.33, 0.4, 1) })
                           else if(lCancelState === PlayerInformation.Unsuccessful) showOverlay({ text: "L-Cancel\nfailed: %1/7".arg(lCancelFrames),  color: Qt.hsva(0.00, 0.4, 1) })
+
+  onIsFastFallingChanged: if(isFastFalling)                                        showOverlay({
+                                                                                                 text: "Fastfall\nFrame %1".arg(player.fastFallFrame),
+                                                                                                 color: Qt.hsva(0.33, 0.4 * Math.max(0, (6 - player.fastFallFrame) / 5), 1)
+                                                                                               })
 
   onWavedashFrameChanged: if(wavedashFrame > 0)                                    showOverlay({
                                                                                                  text: isLedgedash
@@ -56,66 +68,94 @@ Rectangle {
                                                                                                                 1)
                                                                                                })
 
+  Item {
+    id: overlayContent
+    anchors.fill: parent
+    anchors.leftMargin: 5
+    anchors.rightMargin: 5
 
-  AppImage {
-    id: rankImg
-    anchors.verticalCenter: parent.verticalCenter
-    anchors.left: rtl ? parent.left : undefined
-    anchors.right: rtl ? undefined : parent.right
-    height: 96
-    width: height
-    source: imageUrl
-    visible: false
-    antialiasing: false
-  }
+    opacity: allOverlays.length === 0 ? 1 : 0.5
 
-  DropShadow {
-    anchors.fill: rankImg
-    horizontalOffset: 0
-    verticalOffset: 0
-    radius: 4.0
-    samples: 20
-    spread: 1
-    color: "black"
-    source: rankImg
-    visible: !!rank
-  }
-
-  Column {
-    anchors.verticalCenter: parent.verticalCenter
-    anchors.left: rtl ? undefined : parent.left
-    anchors.right: rtl ? parent.right : undefined
-
-    CustomText {
-      textItem.width: playerOverlay.width
-      textItem.text: rank
-                     ? profile.ratingUpdateCount > 1
-                       ? "%1 (%2)".arg(rank.rank).arg(profile.ratingOrdinal.toFixed(0))
-                       : "(No Rank)"
-      : ""
-      textItem.font.pixelSize: rank && profile.ratingUpdateCount > 1 ? 54 : 44
-      textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
-      textItem.verticalAlignment: Text.AlignVCenter
-      shadowItem.radius: 5.0
-      shadowItem.samples: 20
-      //   height: 54
+    Behavior on opacity {
+      PropertyAnimation {
+        duration: 200
+        easing.type: Easing.OutQuad
+      }
     }
 
-    CustomText {
-      textItem.width: playerOverlay.width
-      textItem.text: playerOverlay.player?.slippiCode ?? ""
-      textItem.font.pixelSize: 70
-      textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
-      textItem.font.family: "VCR OSD Mono"
-      shadowItem.radius: 6.0
-      shadowItem.samples: 20
+    AppImage {
+      id: rankImg
+      anchors.verticalCenter: parent.verticalCenter
+      anchors.left: rtl ? parent.left : undefined
+      anchors.right: rtl ? undefined : parent.right
+      height: 96
+      width: height
+      source: imageUrl
+      visible: false
+      antialiasing: false
+    }
+
+    DropShadow {
+      anchors.fill: rankImg
+      horizontalOffset: 0
+      verticalOffset: 0
+      radius: 4.0
+      samples: 20
+      spread: 1
+      color: "black"
+      source: rankImg
+      visible: !!rank
+    }
+
+    Column {
+      anchors.verticalCenter: parent.verticalCenter
+      anchors.left: rtl ? undefined : parent.left
+      anchors.right: rtl ? parent.right : undefined
+
+      CustomText {
+        textItem.width: playerOverlay.width
+        textItem.text: rank
+                       ? profile.ratingUpdateCount > 1
+                         ? "%1 (%2)".arg(rank.rank).arg(profile.ratingOrdinal.toFixed(0))
+                         : "(No Rank)"
+        : ""
+        textItem.font.pixelSize: rank && profile.ratingUpdateCount > 1 ? 54 : 44
+        textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
+        textItem.verticalAlignment: Text.AlignVCenter
+        shadowItem.radius: 5.0
+        shadowItem.samples: 20
+        //   height: 54
+      }
+
+      CustomText {
+        textItem.width: playerOverlay.width
+        textItem.text: playerOverlay.player?.slippiCode || ""
+        textItem.font.pixelSize: 70
+        textItem.horizontalAlignment: rtl ? Text.AlignRight : Text.AlignLeft
+        textItem.font.family: "VCR OSD Mono"
+        shadowItem.radius: 6.0
+        shadowItem.samples: 20
+      }
     }
   }
 
   function showOverlay(properties) {
-     // console.log("Show overlay:", properties.text)
-     overlayItemC.createObject(playerOverlay, properties)
+    // console.log("Show overlay:", properties.text)
+    var overlayItem = overlayItemC.createObject(playerOverlay, properties)
+    showingOverlay(overlayItem)
   }
+
+  onShowingOverlay: item => {
+    allOverlays.push(item)
+    allOverlaysChanged()
+  }
+
+  onRemovingOverlay: item => {
+    allOverlays.shift()
+    allOverlaysChanged()
+  }
+
+  onAllOverlaysChanged: console.log("all overlays:", allOverlays.length)
 
   Component {
     id: overlayItemC
@@ -130,6 +170,17 @@ Rectangle {
 
       Component.onCompleted: comboAnim.start()
 
+      Connections {
+        target: playerOverlay
+
+        // when starting another overlay, fade out this one
+        function onShowingOverlay(other) {
+          if(other !== overlayItem) {
+            fadeOutAnim.start()
+          }
+        }
+      }
+
       anchors.verticalCenterOffset: playerOverlay.height
       anchors.verticalCenter: parent.verticalCenter
       width: parent.width
@@ -138,7 +189,7 @@ Rectangle {
       CustomText {
         id: textItem
         anchors.verticalCenter: parent.verticalCenter
-        textItem.width: playerOverlay.width
+        textItem.width: playerOverlay.width - 10
 
         textItem.maximumLineCount: 2
         textItem.elide: Text.ElideRight
@@ -150,6 +201,16 @@ Rectangle {
         textItem.color: "white"
         shadowItem.radius: 6.0
         shadowItem.samples: 20
+      }
+
+      PropertyAnimation {
+        id: fadeOutAnim
+        target: overlayItem
+        property: "opacity"
+        easing.type: Easing.OutQuad
+        from: 1
+        to: 0.5
+        duration: 200
       }
 
       SequentialAnimation {
@@ -164,19 +225,13 @@ Rectangle {
           duration: 200
         }
 
-        ParallelAnimation {
-          PauseAnimation {
-            id: pauseTimer
-            duration: 500
-          }
-          PropertyAnimation {
-            target: overlayItem
-            property: "opacity"
-            //easing.type: Easing.OutQuad
-            from: 1
-            to: 0.5
-            duration: pauseTimer.duration
-          }
+        PauseAnimation {
+          id: pauseTimer
+          duration: 500
+        }
+
+        ScriptAction {
+          script: playerOverlay.removingOverlay(overlayItem)
         }
 
         PropertyAnimation {

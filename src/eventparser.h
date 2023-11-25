@@ -27,6 +27,8 @@ struct PlayerInformation : public QObject {
     Q_PROPERTY(int intangibilityFrames MEMBER intangibilityFrames NOTIFY intangibilityFramesChanged)
     Q_PROPERTY(int wavedashFrame MEMBER wavedashFrame NOTIFY wavedashChanged)
     Q_PROPERTY(qreal wavedashAngle MEMBER wavedashAngle NOTIFY wavedashChanged)
+    Q_PROPERTY(bool isFastFalling MEMBER isFastFalling NOTIFY isFastFallingChanged)
+    Q_PROPERTY(int fastFallFrame MEMBER framesSinceFall NOTIFY framesSinceFallChanged)
 
 signals:
     void comboCountChanged();
@@ -34,6 +36,8 @@ signals:
     void lCancelFramesChanged();
     void intangibilityFramesChanged();
     void wavedashChanged();
+    void isFastFallingChanged();
+    void framesSinceFallChanged();
 
 public:
     PlayerInformation(QObject *parent = nullptr);
@@ -51,8 +55,8 @@ public:
     void setLCancelState(const LCancelState &newLCancelState);
     void setWavedash(int frame, qreal angle);
 
-    bool isLCancel = false;
-    int framesSinceLCancel = 0;
+    bool isLCancel = false, isFalling = false, isFastFalling = false;
+    int framesSinceLCancel = 0, framesSinceFall = 0;
     quint32 dashbackFix = Off, shieldDropFix = Off;
     quint8 charId = 0, playerType = Empty;
     QString nameTag, slippiCode, slippiName, slippiUid;

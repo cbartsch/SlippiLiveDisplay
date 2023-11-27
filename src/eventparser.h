@@ -138,6 +138,7 @@ public:
     explicit EventParser(QObject *parent = nullptr);
 
     Q_INVOKABLE void parseSlippiMessage(const QVariantMap &event);
+    Q_INVOKABLE void disconnnect();
 
     GameInformation *gameInfo() const;
 

@@ -56,6 +56,22 @@ void EventParser::parseSlippiMessage(const QVariantMap &event)
     else if(type == "end_game") {
         resetGameState();
     }
+    else {
+        qWarning() << "EventParser: Unknown message type" << type;
+    }
+}
+
+void EventParser::disconnnect()
+{
+    if(!m_connected) {
+        qWarning() << "EventParser: not connected, cannot disconnect.";
+        return;
+    }
+
+    resetGameState();
+
+    m_connected = false;
+    emit connectedChanged();
 }
 
 void EventParser::parseGameEvent(int cursor, int nextCursor, const QByteArray &payload)

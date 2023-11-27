@@ -77,6 +77,7 @@ void DolphinConnectionPrivate::connect(const QString &hostname, quint16 port) {
         switch(event.type) {
         case ENET_EVENT_TYPE_CONNECT:
             qDebug() << "Connected to:" << event.peer->channelCount;
+            QMetaObject::invokeMethod(m_item, "setConnected", Q_ARG(bool, true));
             break;
         case ENET_EVENT_TYPE_DISCONNECT:
             qDebug() << "Could not connect to Dolphin.";
@@ -137,6 +138,7 @@ void DolphinConnectionPrivate::receive() {
 
         enet_peer_disconnect(event.peer, 0);
 
+        QMetaObject::invokeMethod(m_item, "setConnected", Q_ARG(bool, false));
         QMetaObject::invokeMethod(this, "connect", Q_ARG(QString, m_item->m_hostAddress), Q_ARG(quint16, m_item->m_port));
         break;
     case ENET_EVENT_TYPE_RECEIVE: {
@@ -153,4 +155,12 @@ void DolphinConnectionPrivate::receive() {
         qDebug() << "Unknown event:" << event.type;
         break;
     }
+}
+
+void DolphinConnection::setConnected(bool newConnected)
+{
+    if (m_connected == newConnected)
+        return;
+    m_connected = newConnected;
+    emit connectedChanged();
 }

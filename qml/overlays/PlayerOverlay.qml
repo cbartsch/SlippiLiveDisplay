@@ -26,9 +26,6 @@ Rectangle {
   property var rank
   property bool rtl
 
-  Component.onCompleted: console.log("created overlay:", player, player?.nameTag)
-  onPlayerChanged: console.log("player changed:", player, player?.nameTag)
-
   readonly property url imageUrl: profile && profile.ratingUpdateCount > 1
                                   ? rank ? "https://slippi.gg/" + rank.imageUrl : ""
   : "https://slippi.gg/static/media/rank_Unranked3.0f639e8b73090a7ba4a50f7bcc272f57.svg"
@@ -47,14 +44,24 @@ Rectangle {
   signal showingOverlay(Item overlay)
   signal removingOverlay(Item overlay)
 
-  onComboCountChanged:    if(comboCount > 1)                                       showOverlay({ text: "Combo x%1".arg(comboCount), duration: 1000 })
+  onComboCountChanged:    if(comboCount > 1)                                       showOverlay({
+                                                                                                 text: "Combo x%1".arg(comboCount),
+                                                                                                 duration: 1000,
+                                                                                                 show: settings.showComboOverlay
+                                                                                               })
 
-  onLCancelStateChanged:  if(lCancelState === PlayerInformation.Successful)        showOverlay({ text: "L-Cancel\nsuccess: %1/7".arg(lCancelFrames), color: Qt.hsva(0.33, 0.4, 1) })
-                          else if(lCancelState === PlayerInformation.Unsuccessful) showOverlay({ text: "L-Cancel\nfailed: %1/7".arg(lCancelFrames),  color: Qt.hsva(0.00, 0.4, 1) })
+  onLCancelStateChanged:  if(lCancelState === PlayerInformation.Successful || lCancelState === PlayerInformation.Unsuccessful)
+                                                                                   showOverlay({
+                                                                                                 text: "L-Cancel:\n%1/7".arg(lCancelFrames),
+                                                                                                 color: lCancelState === PlayerInformation.Successful
+                                                                                                        ? Qt.hsva(0.33, 0.4, 1) : Qt.hsva(0.00, 0.4, 1),
+                                                                                                 show: settings.showLCancelOverlay
+                                                                                               })
 
   onIsFastFallingChanged: if(isFastFalling)                                        showOverlay({
                                                                                                  text: "Fastfall\nFrame %1".arg(player.fastFallFrame),
-                                                                                                 color: Qt.hsva(0.33, 0.4 * Math.max(0, (6 - player.fastFallFrame) / 5), 1)
+                                                                                                 color: Qt.hsva(0.33, 0.4 * Math.max(0, (6 - player.fastFallFrame) / 5), 1),
+                                                                                                 show: settings.showFastfallOverlay
                                                                                                })
 
   onWavedashFrameChanged: if(wavedashFrame > 0)                                    showOverlay({
@@ -65,8 +72,30 @@ Rectangle {
                                                                                                  color: Qt.hsva(0.33, 0.4 * Math.max(0, isLedgedash
                                                                                                                                      ? (galintFrames) / 10
                                                                                                                                      : (6 - wavedashFrame) / 5),
-                                                                                                                1)
+                                                                                                                1),
+                                                                                                 show: settings.showWavedashOverlay
                                                                                                })
+
+  function showOverlay(properties) {
+    if(properties.show) {
+      delete properties.show
+      var overlayItem = overlayItemC.createObject(playerOverlay, properties)
+      showingOverlay(overlayItem)
+    }
+    else {
+      console.debug("Overlay disabled:", properties.text)
+    }
+  }
+
+  onShowingOverlay: item => {
+    allOverlays.push(item)
+    allOverlaysChanged()
+  }
+
+  onRemovingOverlay: item => {
+    allOverlays.shift()
+    allOverlaysChanged()
+  }
 
   Item {
     id: overlayContent
@@ -138,24 +167,6 @@ Rectangle {
       }
     }
   }
-
-  function showOverlay(properties) {
-    // console.log("Show overlay:", properties.text)
-    var overlayItem = overlayItemC.createObject(playerOverlay, properties)
-    showingOverlay(overlayItem)
-  }
-
-  onShowingOverlay: item => {
-    allOverlays.push(item)
-    allOverlaysChanged()
-  }
-
-  onRemovingOverlay: item => {
-    allOverlays.shift()
-    allOverlaysChanged()
-  }
-
-  onAllOverlaysChanged: console.log("all overlays:", allOverlays.length)
 
   Component {
     id: overlayItemC

@@ -10,6 +10,10 @@ AppPage {
     id: contentCol
     width: parent.width
 
+    SimpleSection {
+      title: "Status"
+    }
+
     AppListItem {
       enabled: false
       text: "Connected to Slippi: " +
@@ -31,19 +35,20 @@ AppPage {
     }
 
     AppListItem {
+      enabled: false
       text: "Current match ID: " + parser.gameInfo?.matchId ?? "unknown"
-      detailText: "Scores: " + dataModel.playerScores.join(" - ")
+      detailText: "Scores: " + dataModel.playerScores
+        .filter((item, index) => parser.players[index]?.playerType !== PlayerInformation.Empty)
+        .join(" - ")
+    }
+
+    SimpleSection {
+      title: "Players"
+      visible: parser.gameRunning
     }
 
     Repeater {
-      model: parser.gameRunning
-             ? [
-                 parser.gameInfo.player1,
-                 parser.gameInfo.player2,
-                 parser.gameInfo.player3,
-                 parser.gameInfo.player4
-               ]
-             : ""
+      model: parser.gameRunning ? parser.players : ""
 
       AppListItem {
         property var profile: dataModel.netplayProfiles[modelData.slippiCode] || null

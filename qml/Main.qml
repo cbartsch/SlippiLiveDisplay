@@ -2,6 +2,7 @@ import Felgo 4.0
 import QtQuick 2.0
 import QtQuick.Window 2.0
 import Qt5Compat.GraphicalEffects
+import Qt.labs.settings
 
 import SlippiLive 1.0
 
@@ -16,14 +17,32 @@ App {
     id: dataModel
   }
 
+  Settings {
+    id: settings
+
+    property bool showComboOverlay: true
+    property bool showLCancelOverlay: true
+    property bool showWavedashOverlay: true
+    property bool showFastfallOverlay: true
+  }
+
   DolphinConnection {
     id: dolphin
 
+    onConnectedChanged: (conneteted) => { if(!connected) parser.disconnnect() }
     onMessageReceived: (msg) => parser.parseSlippiMessage(msg)
   }
 
   SlippiEventParser {
     id: parser
+
+    // TODO add to C++?
+    readonly property var players: gameRunning ? [
+      gameInfo.player1,
+      gameInfo.player2,
+      gameInfo.player3,
+      gameInfo.player4
+    ] : []
 
     onConnectedChanged: console.log("Connected to Slippi changed:", connected)
     onGameRunningChanged: console.log("Slippi game running changed:", gameRunning, gameInfo?.matchId)
@@ -58,8 +77,26 @@ App {
     Theme.appButton.horizontalPadding = dp(2)
   }
 
-  NavigationStack {
-    InfoPage { }
+  Navigation {
+    navigationMode: navigationModeTabs
+
+    NavigationItem {
+      title: "Status"
+      iconType: IconType.info
+
+      NavigationStack {
+        InfoPage { }
+      }
+    }
+
+    NavigationItem {
+      title: "Settings"
+      iconType: IconType.gear
+
+      NavigationStack {
+        SettingsPage { }
+      }
+    }
   }
 
   Window {

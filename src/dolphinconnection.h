@@ -14,7 +14,6 @@ public:
     explicit DolphinConnection(QObject *parent = nullptr);
     ~DolphinConnection();
 
-
 signals:
     void messageReceived(const QVariantMap &message);
     void connectedChanged();

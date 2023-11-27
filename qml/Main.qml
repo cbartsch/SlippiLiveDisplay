@@ -29,7 +29,7 @@ App {
   DolphinConnection {
     id: dolphin
 
-    onConnectedChanged: (conneteted) => { if(!connected) parser.disconnnect() }
+    onConnectedChanged: if(!connected) parser.disconnnect()
     onMessageReceived: (msg) => parser.parseSlippiMessage(msg)
   }
 

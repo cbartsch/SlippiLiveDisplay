@@ -106,7 +106,7 @@ void DolphinConnectionPrivate::connect(const QString &hostname, quint16 port) {
                                              ENET_PACKET_FLAG_RELIABLE);
 
     if(enet_peer_send(peer, 0, packet) != 0) {
-        qWarning() << "Could not set connect request";
+        qWarning() << "Could not send connect request";
         return;
     }
 

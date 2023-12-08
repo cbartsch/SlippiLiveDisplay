@@ -319,179 +319,109 @@ bool EventParser::parseGameStart()
 
 bool EventParser::parsePreFrame()
 {
-    // from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#pre-frame-update
-    struct PreFrameData {
-        PreFrameData(const QByteArray &data) {
-
-            QDataStream stream(data);
-            stream.setByteOrder(QDataStream::ByteOrder::BigEndian);
-            stream.setFloatingPointPrecision(QDataStream::FloatingPointPrecision::SinglePrecision);
-
-            stream >> frameNumber >> playerIndex >> isFollower >> randomSeed >> actionStateId
-                >> posX >> posY >> facingDirection >> joyStickX >> joyStickY >> cstickX >> cstickY >> triggerValue
-                >> processedButtonsData >> physicalButtonsData
-                >> physicalLTrigger >> physicalRTrigger
-                >> ucfX >> percent >> ucfY;
-
-        }
-
-        qint32 frameNumber;
-        quint8 playerIndex;
-        bool isFollower;
-        quint32 randomSeed;
-        quint16 actionStateId;
-        float posX, posY, facingDirection,
-            joyStickX, joyStickY, cstickX, cstickY, triggerValue;
-
-        struct Buttons {
-            bool dpadLeft : 1, dpadRight : 1, dpadDown: 1, dpadUp: 1;
-            bool z : 1, r : 1, l : 1;
-            bool unused : 1;
-            bool a : 1, b : 1, x : 1, y : 1;
-            bool start : 1;
-            quint8 unused2 : 3;
-        };
-
-        struct ProcessedButtons {
-            Buttons physicalButtons;
-            bool joyStickUp : 1, joyStickDown : 1, joyStickLeft: 1, joyStickRight: 1;
-            bool cStickUp : 1, cStickDown : 1, cStickLeft: 1, cStickRight: 1;
-            quint8 unused : 7;
-            bool anyTrigger : 1;
-        };
-
-        union { ProcessedButtons processedButtons; quint32 processedButtonsData; };
-        union { Buttons physicalButtons;           quint16 physicalButtonsData;  };
-
-        float physicalLTrigger, physicalRTrigger;
-        qint8 ucfX;
-        float percent;
-        qint8 ucfY;
-
-    } d(m_commandData);
-
+    PreFrameData d(m_commandData);
     PlayerInformation &player = *m_gameInfo->players[d.playerIndex];
+    player.preFrame = d;
 
-    bool analogTriggerHeld = d.processedButtons.anyTrigger || d.processedButtons.physicalButtons.z;
-    bool isLCancel = analogTriggerHeld;
-    if(isLCancel && !player.isLCancel) {
-        player.framesSinceLCancel = 0;
-    }
-
-    player.isLCancel = isLCancel;
-
-    if(isLCancel || player.framesSinceLCancel > 0) {
-        player.framesSinceLCancel++;
-        emit player.lCancelFramesChanged();
-    }
+    player.analyzeFrame();
 
     return true;
 }
 
 bool EventParser::parsePostFrame()
 {
-    // from: https://github.com/project-slippi/slippi-wiki/blob/master/SPEC.md#post-frame-update
-    struct PostFrameData {
-        PostFrameData(const QByteArray &data) {
-
-            QDataStream stream(data);
-            stream.setByteOrder(QDataStream::ByteOrder::BigEndian);
-            stream.setFloatingPointPrecision(QDataStream::FloatingPointPrecision::SinglePrecision);
-
-            stream >> frameNumber >> playerIndex >> isFollower >> charId >> actionStateId
-                >> posX >> posY >> facingDirection >> percent >> shieldSize
-                >> lastHitAttackId >> comboCount >> lastHitBy >> stocks >> actionStateFrameCounter
-                >> stateBitFlag1 >> stateBitFlag2 >> stateBitFlag3 >> stateBitFlag4 >> stateBitFlag5
-                >> actionStateData >> airborne >> lastGroundId
-                >> jumpsRemaining >> lCancelStatus >> hurtboxCollisionState
-                >> xSpeedSelfAir >> ySpeedSelf >> xSpeedAttack >> ySpeedAttack >> xSpeedSelfGround
-                >> hitlagFrameRemaining >> animationIndex;
-
-        }
-
-        qint32 frameNumber;
-        quint8 playerIndex;
-        bool isFollower;
-        quint8 charId;
-        quint16 actionStateId;
-        float posX, posY, facingDirection, percent, shieldSize;
-        quint8 lastHitAttackId, comboCount, lastHitBy, stocks;
-        float actionStateFrameCounter;
-
-        union { struct { quint8 : 4; bool isReflectActive : 1;  quint8 : 3;                                                                                 }; quint8 stateBitFlag1; };
-        union { struct { quint8 : 2; bool hasIntangibility : 1; bool isFastFalling : 1;    quint8 : 1; bool isInHitlag: 1;          quint8 : 2;             }; quint8 stateBitFlag2; };
-        union { struct { quint8 : 7; bool isShieldActive : 1;                                                                                               }; quint8 stateBitFlag3; };
-        union { struct { quint8 : 2; bool isInHitStun : 1;      bool isTouchingShield : 1; quint8 : 2; bool isPowershieldActive : 1; quint8 : 2;            }; quint8 stateBitFlag4; };
-        union { struct { quint8 : 3; bool isFollowerBit : 1;    bool isSleeping: 1;        quint8 : 1; bool isDead: 1;               bool isOffscreen : 1;  }; quint8 stateBitFlag5; };
-
-        float actionStateData; // eg. hitstun remaining
-        bool airborne;
-        quint16 lastGroundId;
-        quint8 jumpsRemaining, lCancelStatus, hurtboxCollisionState;
-        float xSpeedSelfAir, ySpeedSelf, xSpeedAttack, ySpeedAttack, xSpeedSelfGround, hitlagFrameRemaining;
-        quint32 animationIndex;
-    } d(m_commandData);
-
+    PostFrameData d(m_commandData);
     PlayerInformation &player = *m_gameInfo->players[d.playerIndex];
+    player.postFrame = d;
+
+    player.analyzeFrame();
+
+    return true;
+}
+
+bool PlayerInformation::analyzeFrame()
+{
+    if(preFrame.isEmpty || postFrame.isEmpty) {
+        return false;
+    }
+
+    bool analogTriggerHeld = preFrame.processedButtons.anyTrigger || preFrame.processedButtons.physicalButtons.z;
+    bool isLCancel = analogTriggerHeld;
+    if(isLCancel && !this->isLCancel) {
+        framesSinceLCancel = 0;
+    }
+
+    this->isLCancel = isLCancel;
+
+    if(isLCancel || framesSinceLCancel > 0) {
+        framesSinceLCancel++;
+        emit lCancelFramesChanged();
+    }
+
+    if(postFrame.playerIndex == 0) {
+        qDebug() << "Action state:" << QString::number(postFrame.actionStateId, 16);
+    }
 
     // CliffWait - get 30 intangibility frames
-    if(d.actionStateId == 253 && player.intangibilityFrames == 0) {
-        player.intangibilityFrames = 31;
+    if(postFrame.actionStateId == 253 && intangibilityFrames == 0) {
+        intangibilityFrames = 31;
     }
 
-    if(player.intangibilityFrames > 0) {
-        player.intangibilityFrames--;
-        emit player.intangibilityFramesChanged();
+    if(intangibilityFrames > 0) {
+        intangibilityFrames--;
+        emit intangibilityFramesChanged();
     }
 
-    bool falling = d.airborne && d.ySpeedSelf < 0;
+    bool falling = postFrame.airborne && postFrame.ySpeedSelf < 0;
 
-    if(falling != player.isFalling) {
-        player.framesSinceFall = 0;
-        player.isFalling = falling;
+    if(falling != isFalling) {
+        framesSinceFall = 0;
+        isFalling = falling;
     }
 
     // note: the fastFalling flag is true on the frame after inputting fast fall
     // thus increment the frames afterwards so frame 1 does not output frame 2
-    if(d.isFastFalling != player.isFastFalling) {
-        player.isFastFalling = d.isFastFalling;
-        emit player.isFastFallingChanged();
+    if(postFrame.isFastFalling != isFastFalling) {
+        isFastFalling = postFrame.isFastFalling;
+        emit isFastFallingChanged();
     }
 
     if(falling) {
-        player.framesSinceFall++;
-        emit player.framesSinceFallChanged();
+        framesSinceFall++;
+        emit framesSinceFallChanged();
     }
 
     // LandingFallSpecial - landing lag after free fall or airdodge
-    if(d.actionStateId == 43 && d.actionStateFrameCounter == 0) {
+    if(postFrame.actionStateId == 43 && postFrame.actionStateFrameCounter == 0) {
         // first frame of LandingFallSpecial
-        QVector2D speedVector(d.xSpeedSelfGround, d.ySpeedSelf);
+        QVector2D speedVector(postFrame.xSpeedSelfGround, postFrame.ySpeedSelf);
         qreal wdTiming = qLn(speedVector.length() / 3.1) / qLn(0.9);
         qreal fractionalPart = qAbs(wdTiming - qRound(wdTiming));
-
 
         if(fractionalPart > 0.001) {
             // not a wavedash if the speed isn't directly influenced by the airdodge (3.1 * 0.9 ^ nFrames)
             // TODO implement a better detection for this
-            player.setWavedash(0, 0);
+            setWavedash(0, 0);
             qDebug() << "Not a wavedash:" << wdTiming << fractionalPart;
         }
         else {
-            float angle = M_PI + qAtan2(d.ySpeedSelf, d.xSpeedSelfGround);
+            float angle = M_PI + qAtan2(postFrame.ySpeedSelf, postFrame.xSpeedSelfGround);
             if(angle > M_PI_2) {
                 angle = M_PI - angle;
             }
 
-            player.setWavedash(qRound(wdTiming), angle * 180 / M_PI);
+            setWavedash(qRound(wdTiming), angle * 180 / M_PI);
         }
     }
     else {
-        player.setWavedash(0, 0);
+        setWavedash(0, 0);
     }
 
-    player.setComboCount(d.comboCount);
-    player.setLCancelState(PlayerInformation::LCancelState(d.lCancelStatus));
+    setComboCount(postFrame.comboCount);
+    setLCancelState(PlayerInformation::LCancelState(postFrame.lCancelStatus));
+
+    preFrame = {};
+    postFrame = {};
 
     return true;
 }

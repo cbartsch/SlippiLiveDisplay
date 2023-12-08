@@ -7,6 +7,8 @@
 #include <QVariant>
 #include <QQmlListProperty>
 
+#include "slippievents.h"
+
 const int NUM_PLAYERS = 4;
 
 struct PlayerInformation : public QObject {
@@ -54,12 +56,20 @@ public:
     void setComboCount(quint32 newComboCount);
     void setLCancelState(const LCancelState &newLCancelState);
     void setWavedash(int frame, qreal angle);
+    bool analyzeFrame();
 
-    bool isLCancel = false, isFalling = false, isFastFalling = false;
-    int framesSinceLCancel = 0, framesSinceFall = 0;
+    // fields set from EventParser
+    PreFrameData preFrame;
+    PostFrameData postFrame;
+
     quint32 dashbackFix = Off, shieldDropFix = Off;
     quint8 charId = 0, playerType = Empty;
     QString nameTag, slippiCode, slippiName, slippiUid;
+
+private:
+    // fields set from analyzeFrame()
+    bool isLCancel = false, isFalling = false, isFastFalling = false;
+    int framesSinceLCancel = 0, framesSinceFall = 0;
     quint32 comboCount = 0;
     LCancelState lCancelState = Unknown;
     int wavedashFrame = 0;
@@ -158,11 +168,14 @@ signals:
 
 private:
     void parseGameEvent(int cursor, int nextCursor, const QByteArray &payload);
+
     void parsePayloadSizes();
     bool parseCommand();
     bool parseGameStart();
+
     bool parsePreFrame();
     bool parsePostFrame();
+
     bool parseGameEnd();
     void resetGameState();
 

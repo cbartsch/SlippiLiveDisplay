@@ -35,7 +35,9 @@ Rectangle {
   readonly property int lCancelFrames:       player?.lCancelFrames       || 0
   readonly property int wavedashFrame:       player?.wavedashFrame       || 0
   readonly property int intangibilityFrames: player?.intangibilityFrames || 0
+  readonly property int cycloneBPresses:     player?.cycloneBPresses     || 0
   readonly property bool isFastFalling:      player?.isFastFalling       ?? false
+
   readonly property int galintFrames: Math.max(0, intangibilityFrames - 10) // subtract 10 frames of landing lag
   readonly property bool isLedgedash: intangibilityFrames > 0
 
@@ -74,6 +76,12 @@ Rectangle {
                                                                                                                                      : (6 - wavedashFrame) / 5),
                                                                                                                 1),
                                                                                                  show: settings.showWavedashOverlay
+                                                                                               })
+
+  onCycloneBPressesChanged:  if(cycloneBPresses > 1)                               showOverlay({
+                                                                                                 text: "Cyclone\nmash: %1".arg(cycloneBPresses),
+                                                                                                 color: Qt.hsva(0.33, 0.8 * cycloneBPresses / 19, 1),
+                                                                                                 show: settings.showComboOverlay
                                                                                                })
 
   function showOverlay(properties) {

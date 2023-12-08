@@ -24,6 +24,7 @@ App {
     property bool showLCancelOverlay: true
     property bool showWavedashOverlay: true
     property bool showFastfallOverlay: true
+    property bool showCharSpecificOverlay: true
   }
 
   DolphinConnection {

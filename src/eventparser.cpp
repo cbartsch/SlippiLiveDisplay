@@ -358,10 +358,6 @@ bool PlayerInformation::analyzeFrame()
         emit lCancelFramesChanged();
     }
 
-    if(postFrame.playerIndex == 0) {
-        qDebug() << "Action state:" << QString::number(postFrame.actionStateId, 16);
-    }
-
     // CliffWait - get 30 intangibility frames
     if(postFrame.actionStateId == 253 && intangibilityFrames == 0) {
         intangibilityFrames = 31;
@@ -417,8 +413,25 @@ bool PlayerInformation::analyzeFrame()
         setWavedash(0, 0);
     }
 
+    // Luigi aerial down B
+    if(charId == 7 && postFrame.actionStateId == 0x166) {
+        bool isBPress = preFrame.physicalButtons.b && !preFramePrev.physicalButtons.b;
+        float ySpeedDiff = postFramePrev.ySpeedSelf - postFrame.ySpeedSelf;
+
+        // B pressed + vertical speed increased -> press during mash window
+        if(isBPress && ySpeedDiff) {
+            setCycloneBPresses(cycloneBPresses + 1);
+        }
+    }
+    else {
+        setCycloneBPresses(0);
+    }
+
     setComboCount(postFrame.comboCount);
     setLCancelState(PlayerInformation::LCancelState(postFrame.lCancelStatus));
+
+    preFramePrev = preFrame;
+    postFramePrev = postFrame;
 
     preFrame = {};
     postFrame = {};
@@ -481,6 +494,7 @@ void PlayerInformation::setComboCount(quint32 newComboCount)
 {
     if (comboCount == newComboCount)
         return;
+
     comboCount = newComboCount;
     emit comboCountChanged();
 }
@@ -489,6 +503,7 @@ void PlayerInformation::setLCancelState(const LCancelState &newLCancelState)
 {
     if (lCancelState == newLCancelState)
         return;
+
     lCancelState = newLCancelState;
     emit lCancelStateChanged();
 }
@@ -501,4 +516,13 @@ void PlayerInformation::setWavedash(int frame, qreal angle)
     wavedashFrame = frame;
     wavedashAngle = angle;
     emit wavedashChanged();
+}
+
+void PlayerInformation::setCycloneBPresses(int bPresses)
+{
+    if(cycloneBPresses == bPresses)
+        return;
+
+    cycloneBPresses = bPresses;
+    emit cycloneBPressesChanged();
 }

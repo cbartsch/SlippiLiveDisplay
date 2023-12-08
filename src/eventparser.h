@@ -23,6 +23,7 @@ struct PlayerInformation : public QObject {
     Q_PROPERTY(QString slippiName MEMBER slippiName CONSTANT)
     Q_PROPERTY(QString slippiUid MEMBER slippiUid CONSTANT)
 
+    // generic stats
     Q_PROPERTY(quint32 comboCount MEMBER comboCount WRITE setComboCount NOTIFY comboCountChanged)
     Q_PROPERTY(LCancelState lCancelState MEMBER lCancelState WRITE setLCancelState NOTIFY lCancelStateChanged)
     Q_PROPERTY(int lCancelFrames MEMBER framesSinceLCancel NOTIFY lCancelFramesChanged)
@@ -32,6 +33,9 @@ struct PlayerInformation : public QObject {
     Q_PROPERTY(bool isFastFalling MEMBER isFastFalling NOTIFY isFastFallingChanged)
     Q_PROPERTY(int fastFallFrame MEMBER framesSinceFall NOTIFY framesSinceFallChanged)
 
+    // char specific stats
+    Q_PROPERTY(int cycloneBPresses MEMBER cycloneBPresses NOTIFY cycloneBPressesChanged)
+
 signals:
     void comboCountChanged();
     void lCancelStateChanged();
@@ -40,6 +44,7 @@ signals:
     void wavedashChanged();
     void isFastFallingChanged();
     void framesSinceFallChanged();
+    void cycloneBPressesChanged();
 
 public:
     PlayerInformation(QObject *parent = nullptr);
@@ -56,11 +61,13 @@ public:
     void setComboCount(quint32 newComboCount);
     void setLCancelState(const LCancelState &newLCancelState);
     void setWavedash(int frame, qreal angle);
+    void setCycloneBPresses(int bPresses);
+
     bool analyzeFrame();
 
     // fields set from EventParser
-    PreFrameData preFrame;
-    PostFrameData postFrame;
+    PreFrameData preFrame, preFramePrev;
+    PostFrameData postFrame, postFramePrev;
 
     quint32 dashbackFix = Off, shieldDropFix = Off;
     quint8 charId = 0, playerType = Empty;
@@ -75,6 +82,7 @@ private:
     int wavedashFrame = 0;
     int intangibilityFrames = 0;
     qreal wavedashAngle = 0;
+    int cycloneBPresses = 0;
 };
 Q_DECLARE_METATYPE(PlayerInformation);
 

@@ -41,6 +41,13 @@ AppPage {
       checked: settings.showFastfallOverlay
       onCheckedChanged: settings.showFastfallOverlay = this.checked
     }
+
+    CheckableListItem {
+      text: "Show Character-Specific stats"
+
+      checked: settings.showCharSpecificOverlay
+      onCheckedChanged: settings.showCharSpecificOverlay = this.checked
+    }
   }
 
   component CheckableListItem : AppListItem {

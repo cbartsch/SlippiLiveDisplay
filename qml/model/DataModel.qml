@@ -68,7 +68,25 @@ Item {
 
     var bodyObj = {
       operationName: "AccountManagementPageQuery",
-      query: "fragment userProfilePage on User {
+      query: "
+fragment profileFieldsV2 on NetplayProfileV2 {
+  id
+  ratingOrdinal
+  ratingUpdateCount
+  wins
+  losses
+  dailyGlobalPlacement
+  dailyRegionalPlacement
+  continent
+  characters {
+    character
+    gameCount
+    __typename
+  }
+  __typename
+}
+
+fragment userProfilePage on User {
   fbUid
   displayName
   connectCode {
@@ -82,18 +100,17 @@ Item {
     __typename
   }
   rankedNetplayProfile {
-    id
-    ratingOrdinal
-    ratingUpdateCount
-    wins
-    losses
-    dailyGlobalPlacement
-    dailyRegionalPlacement
-    continent
-    characters {
+    ...profileFieldsV2
+    __typename
+  }
+  rankedNetplayProfileHistory {
+    ...profileFieldsV2
+    season {
       id
-      character
-      gameCount
+      startedAt
+      endedAt
+      name
+      status
       __typename
     }
     __typename
@@ -136,12 +153,12 @@ query AccountManagementPageQuery($cc: String!, $uid: String!) {
             }
           }
           else {
-            console.warn("Responst status was not 200:", r.status,
+            console.warn("Response status was not 200:", r.status,
                          "response:", r.responseText)
           }
         }
     };
-    r.open("POST", "https://gql-gateway-dot-slippi.uc.r.appspot.com/graphql");
+    r.open("POST", "https://gql-gateway-2-dot-slippi.uc.r.appspot.com/graphql");
     r.setRequestHeader("Content-Type", "application/json")
     r.send(body);
   }

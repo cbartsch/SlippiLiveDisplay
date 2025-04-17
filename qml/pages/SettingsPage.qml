@@ -16,6 +16,7 @@ AppPage {
 
     CheckableListItem {
       text: "Show Combos"
+      detailText: "Displays in-game combo counter"
 
       checked: settings.showComboOverlay
       onCheckedChanged: settings.showComboOverlay = this.checked
@@ -23,6 +24,7 @@ AppPage {
 
     CheckableListItem {
       text: "Show L-Cancels"
+      detailText: "Displays L-cancel timing and success"
 
       checked: settings.showLCancelOverlay
       onCheckedChanged: settings.showLCancelOverlay = this.checked
@@ -30,6 +32,7 @@ AppPage {
 
     CheckableListItem {
       text: "Show Wavedashes"
+      detailText: "Displays wavedash angle and timing"
 
       checked: settings.showWavedashOverlay
       onCheckedChanged: settings.showWavedashOverlay = this.checked
@@ -37,6 +40,7 @@ AppPage {
 
     CheckableListItem {
       text: "Show Fastfalls"
+      detailText: "Displays fastfall timing"
 
       checked: settings.showFastfallOverlay
       onCheckedChanged: settings.showFastfallOverlay = this.checked
@@ -44,6 +48,7 @@ AppPage {
 
     CheckableListItem {
       text: "Show Character-Specific stats"
+      detailText: "Displays: Luigi cyclone mash counter (other suggestions welcome)"
 
       checked: settings.showCharSpecificOverlay
       onCheckedChanged: settings.showCharSpecificOverlay = this.checked

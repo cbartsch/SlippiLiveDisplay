@@ -13,6 +13,12 @@ import "pages"
 App {
   id: app
 
+  width: dp(480)
+  height: dp(768)
+  storeWindowGeometry: true
+
+  title: "SlippiLiveDisplay " + Constants.versionName
+
   DataModel {
     id: dataModel
   }

@@ -1,8 +1,8 @@
 {
   "title": "SlippiLiveDisplay",
-  "identifier": "com.yourcompany.wizardEVAP.SlippiLiveDisplay",
+  "identifier": "at.cb.SlippiLiveDisplay",
   "orientation": "auto",
-  "versioncode": 1,
-  "versionname": "1.0.0",
-  "stage": "test"
+  "versioncode": 2,
+  "versionname": "1.1",
+  "stage": "publish"
 }

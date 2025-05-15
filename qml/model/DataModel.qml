@@ -67,9 +67,9 @@ Item {
     }
 
     var bodyObj = {
-      operationName: "AccountManagementPageQuery",
+      operationName: "UserProfilePageQuery",
       query: "
-fragment profileFieldsV2 on NetplayProfileV2 {
+fragment profileFields on NetplayProfile {
   id
   ratingOrdinal
   ratingUpdateCount
@@ -100,11 +100,11 @@ fragment userProfilePage on User {
     __typename
   }
   rankedNetplayProfile {
-    ...profileFieldsV2
+    ...profileFields
     __typename
   }
   rankedNetplayProfileHistory {
-    ...profileFieldsV2
+    ...profileFields
     season {
       id
       startedAt
@@ -118,19 +118,13 @@ fragment userProfilePage on User {
   __typename
 }
 
-query AccountManagementPageQuery($cc: String!, $uid: String!) {
-  getUser(fbUid: $uid) {
+query UserProfilePageQuery($cc: String, $uid: String) {
+  getUser(fbUid: $uid, connectCode: $cc) {
     ...userProfilePage
     __typename
   }
-  getConnectCode(code: $cc) {
-    user {
-      ...userProfilePage
-      __typename
-    }
-    __typename
-  }
-}",
+}
+",
       variables: {cc: code, uid: code}
     }
 
@@ -143,8 +137,8 @@ query AccountManagementPageQuery($cc: String!, $uid: String!) {
             var response = JSON.parse(r.responseText)
             var data = response.data
 
-            if(data.getConnectCode.user) {
-              var user = data.getConnectCode.user
+            if(data.getUser) {
+              var user = data.getUser
               netplayProfiles[code] = user.rankedNetplayProfile
               netplayProfilesChanged()
             }
@@ -158,7 +152,7 @@ query AccountManagementPageQuery($cc: String!, $uid: String!) {
           }
         }
     };
-    r.open("POST", "https://gql-gateway-2-dot-slippi.uc.r.appspot.com/graphql");
+    r.open("POST", "https://internal.slippi.gg/graphql");
     r.setRequestHeader("Content-Type", "application/json")
     r.send(body);
   }
